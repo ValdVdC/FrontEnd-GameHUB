@@ -1,0 +1,56 @@
+/* You can add global styles to this file, and also import other style files */
+  :root {
+    --dark-bg: #0d1117;
+    --dark-surface: #161b22;
+    --dark-border: #30363d;
+    --dark-text: #c9d1d9;
+    --dark-text-secondary: #8b949e;
+    --accent-color: #74efff;
+  }
+  
+  body {
+    background-color: var(--dark-bg);
+    color: var(--dark-text);
+    font-size: large;
+    font-weight: bold;
+  }
+  
+  /* Estilos globais compartilhados */
+  .btn-neon {
+    background-color: var(--accent-color);
+    color: var(--dark-bg);
+    font-weight: bold;
+  }
+
+  
+  .btn-outline-neon {
+    color: var(--accent-color);
+    border: 2px solid var(--accent-color);
+    font-weight: bold;
+  }
+  
+  section {
+    position: relative;
+    z-index: 1;
+  }
+  [id] {
+    scroll-margin-top: 28px;
+  }
+  ::-webkit-scrollbar {
+    width: 12px;
+  }
+  ::-webkit-scrollbar-track {
+    background: #1a1a1a;
+    border-radius: 4px;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: #74efff;
+    border-radius: 2px;
+    border: 2px solid transparent;
+    background-clip: padding-box;
+  }
+  ::-webkit-scrollbar-thumb:hover {
+    background: #5dbfcc;
+    border: 2px solid transparent; 
+    background-clip: padding-box;
+  }
