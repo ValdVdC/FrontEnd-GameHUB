@@ -6,7 +6,7 @@ import { BehaviorSubject, Observable } from 'rxjs';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = 'https://backend-gamehub.onrender.com/'
+  private apiUrl = 'https://backend-gamehub.onrender.com/api'
   
   constructor(private http: HttpClient) {}
   
