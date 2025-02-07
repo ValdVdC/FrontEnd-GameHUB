@@ -7,7 +7,7 @@ import { environment } from '../../environments/environment';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = environment.apiUrl || process.env['NG_APP_API_URL']
+  private apiUrl = environment.apiUrl
   
   constructor(private http: HttpClient) {}
   
