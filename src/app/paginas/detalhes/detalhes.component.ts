@@ -1,7 +1,8 @@
-import { Component, OnDestroy, OnInit} from '@angular/core';
+import { Component, OnDestroy, OnInit, ViewChild} from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ActivatedRoute } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
+
 
 @Component({
   selector: 'app-detalhes',
@@ -10,6 +11,7 @@ import { Subject, takeUntil } from 'rxjs';
 })
 export class DetalhesComponent implements OnInit, OnDestroy{
   constructor(private apiService:ApiService, private route:ActivatedRoute){}
+  
   jogo:any[] = [];
   jogoCarregando:boolean = true
   private destroy$ = new Subject<void>();
@@ -28,7 +30,7 @@ export class DetalhesComponent implements OnInit, OnDestroy{
           .pipe(takeUntil(this.destroy$))
           .subscribe(detalhes => {
             if(detalhes) {
-              this.jogo = detalhes;
+              this.jogo = [detalhes];
               console.log(detalhes)
               this.jogoCarregando = false;
             }
@@ -39,4 +41,5 @@ export class DetalhesComponent implements OnInit, OnDestroy{
     this.destroy$.next();
     this.destroy$.complete();
   }
+
 }

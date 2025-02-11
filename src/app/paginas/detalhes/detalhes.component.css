@@ -87,19 +87,37 @@ section {
 .row{
   min-height: 600px;
 }
-.game-card-category-rating{
+
+.game-card-category {
   display: flex;
-  justify-content: space-between;
+  flex-flow: row wrap;
+  gap: 8px;
+  margin: 10px 0;
+  width: 100%;
+}
+
+.genre-badge {
+  background: linear-gradient(135deg, #b0f4fd, #74efff);
+  color: #000;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 0.9rem;
+  margin: 0;
+  white-space: nowrap;
+  display: inline-flex;
   align-items: center;
+  height: fit-content;
+  user-select: none;
 }
-.genre-badge{
-  flex: 1;
-  min-width: 0;
-  overflow-wrap: break-word;
-  white-space: normal; 
-  word-break: keep-all;
-  margin-right: auto; 
+
+.genre-badge:hover{
+  cursor: pointer;
+  opacity: 0.9;
 }
+.genre-badge:active{
+  opacity: 0.8;
+}
+
 .rating i.bi-star-fill {
   color: #74efff;
   margin-right: 4px;
@@ -108,21 +126,190 @@ section {
   display: flex;
   justify-content: space-between;
 }
+.game-card-platform {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 10px 0;
+}
+.platform {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: linear-gradient(135deg, #aabce2, #7ea9e6);
+  border-radius: 16px;
+}
+.platform:hover{
+  cursor: pointer;
+  opacity: 0.9;
+}
+.platform:active{
+  opacity: 0.8;
+}
 
+.platform-logo {
+  width: 90px;
+  height: 90px;
+  object-fit: contain;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transform: scale(0.9);
+}
+/* Estilização do container de vídeos */
 .videos {
-  margin-top: 20px;
+  margin-top: 40px;
+  padding: 20px 0;
+  background-color: rgba(116, 239, 255, 0.05); /* Sutil cor de fundo */
+  border-radius: 15px;
 }
 
+/* Estilização do título "Vídeos" */
+.videos h4 {
+  font-size: 2rem;
+  color: #ffffff;
+  margin-bottom: 30px;
+  padding-bottom: 15px;
+  position: relative;
+  text-align: center;
+}
+/* Linha decorativa abaixo do título */
+.videos h4::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100px;
+  height: 3px;
+  background: linear-gradient(90deg, transparent, #74efff, transparent);
+  border-radius: 2px;
+}
+
+/* Container do carrossel */
+::ng-deep .carousel {
+  padding: 0 40px; /* Espaço para as setas de navegação */
+}
+
+/* Ajustes para o container de vídeo */
 .video-container {
-  gap: 10px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 20px 0;
+  height: 0;
+  padding-bottom: 56.25%; /* Mantém proporção 16:9 */
 }
 
+/* Estilização do item de vídeo */
 .video-item {
-  min-width: 720px;
-  max-width: 720px;
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
 }
-iframe {
-  border: 4px solid #5dbfcc;
-  border-radius: 10px; 
-  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.3); 
+
+.video-item iframe {
+  width: 100%;
+  height: 100%;
+  border: 3px solid #74efff;
+  border-radius: 12px;
+  box-shadow: 0 4px 15px rgba(116, 239, 255, 0.2);
+  transition: transform 0.3s ease;
+}
+
+/* Estilização dos controles do carrossel */
+::ng-deep .carousel-control-prev,
+::ng-deep .carousel-control-next {
+  width: 40px;
+  height: 40px;
+  background-color: #74efff;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.7;
+  transition: opacity 0.3s ease;
+}
+
+::ng-deep .carousel-control-prev:hover,
+::ng-deep .carousel-control-next:hover {
+  opacity: 1;
+}
+
+::ng-deep .carousel-control-prev,
+::ng-deep .carousel-control-next {
+  width: 40px;
+  height: 40px;
+  background-color: rgba(116, 239, 255, 0.2);
+  border: 2px solid #74efff;
+  border-radius: 50%;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0.8;
+  transition: all 0.3s ease;
+}
+
+::ng-deep .carousel-control-prev:hover,
+::ng-deep .carousel-control-next:hover {
+  background-color: rgba(116, 239, 255, 0.4);
+  opacity: 1;
+  transform: translateY(-50%) scale(1.1);
+}
+
+/* Indicadores do carrossel */
+::ng-deep .carousel-indicators {
+  bottom: -40px; /* Afasta os indicadores do vídeo */
+}
+
+::ng-deep .carousel-indicators button {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #74efff;
+  background-color: transparent;
+  opacity: 0.7;
+  margin: 0 8px;
+  transition: all 0.3s ease;
+  padding-right: 4px;
+  padding-left: 4px;
+}
+
+::ng-deep .carousel-indicators button.active {
+  background-color: #74efff;
+  opacity: 1;
+}
+
+::ng-deep .carousel-indicators button:hover {
+  opacity: 1;
+  transform: scale(1.1);
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .video-container {
+    padding-bottom: 75%; /* Ajuste para telas menores */
+  }
+  
+  ::ng-deep .carousel {
+    padding: 0 20px;
+  }
+  .videos h4 {
+    font-size: 1.5rem;
+  }
+  
+  ::ng-deep .carousel-control-prev,
+  ::ng-deep .carousel-control-next {
+    width: 35px;
+    height: 35px;
+  }
+  
+  ::ng-deep .carousel-control-prev {
+    left: -38px;
+  }
+  
+  ::ng-deep .carousel-control-next {
+    right: -38px;
+  }
 }

@@ -11,6 +11,7 @@ import { FormatarNotaPipe } from './pipes/formatar-nota.pipe';
 import { DetalhesComponent } from './paginas/detalhes/detalhes.component';
 import { FormsModule } from '@angular/forms';
 import { SafeVideoUrlPipe } from './pipes/safe-video-url.pipe';
+import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
 
 
 @NgModule({
@@ -26,7 +27,8 @@ import { SafeVideoUrlPipe } from './pipes/safe-video-url.pipe';
   imports: [
     BrowserModule,
     AppRoutingModule,
-    FormsModule
+    FormsModule,
+    NgbModule
   ],
   providers: [
     provideHttpClient()

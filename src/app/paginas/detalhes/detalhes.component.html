@@ -13,8 +13,8 @@
             <div class="game-card-name">
               <h3>{{info.name}}</h3>
             </div>
-            <div class="game-card-category" *ngFor="let genre of info.genres">
-              <h5 class="genre-badge">{{genre}}</h5>
+            <div class="game-card-category">
+              <h5 class="genre-badge"  *ngFor="let genre of info.genres"> {{genre}}</h5>
             </div>
             <div class="game-card-date_rating">                
               <div class="date">
@@ -26,12 +26,11 @@
                 {{info.total_rating|formatarNota}}
               </div>
             </div>
-            <!-- <div class="game-card-platform">
-              <div class="platform">
-                <img [src]="info.platforms_logo" alt="" class="img-fluid">
+             <div class="game-card-platform">
+              <div class="platform" *ngFor="let platformInfo of info.platforms_info">
+                <img [src]="platformInfo.logo_url" alt="" class="img-fluid platform-logo">
               </div>
-            </div> -->
-
+            </div> 
           </div>
         </div>
         <div class="col">
@@ -48,20 +47,27 @@
         </div>
         <div class="videos" *ngIf="info.video_url?.length">
           <h4>Vídeos</h4>
-          <div class="video-container">
-            <div class="video-item" *ngFor="let video of info.video_url">
-              <iframe 
-                width="720" 
-                height="480" 
-                [src]="video  | safeVideoUrl" 
-                frameborder="0" 
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture" 
-                allowfullscreen>
-              </iframe>
-            </div>
-          </div>
+          <ngb-carousel 
+            #carousel 
+            [interval]="0"
+            [showNavigationArrows]="true"
+            [showNavigationIndicators]="true"
+            [pauseOnHover]="true"
+            [wrap]="true">
+            <ng-template ngbSlide *ngFor="let video of info.video_url">
+              <div class="video-container">
+                <div class="video-item">
+                  <iframe 
+                    [src]="video | safeVideoUrl"
+                    frameborder="0"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowfullscreen>
+                  </iframe>
+                </div>
+              </div>
+            </ng-template>
+          </ngb-carousel>
         </div>
-        
       </div>
     </div>
   </section>

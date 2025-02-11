@@ -21,6 +21,6 @@ export class ApiService {
     return this.http.get(`${this.apiUrl}/game/${id}`)
   }
   buscarJogoPorNome(nome:string):Observable<any>{
-    return this.http.get(`${this.apiUrl}/game/${nome}`)
+    return this.http.get(`${this.apiUrl}/game/search/${nome}`)
   }
 }
