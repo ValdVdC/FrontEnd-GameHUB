@@ -5,7 +5,7 @@
           <h1 class="display-4 neon-text">Seu Hub de Games</h1>
           <p class="lead mb-4">Explore, jogue e conecte-se com a maior comunidade gamer do Brasil</p>
           <div class="d-flex gap-3">
-            <button class="btn btn-neon btn-lg">Explorar Jogos</button>
+            <button class="btn btn-neon btn-lg" routerLink="explorador">Explorar Jogos</button>
             <button class="btn btn-outline-neon btn-lg">Comunidade</button>
           </div>
         </div>
@@ -22,65 +22,28 @@
           <p>Carregando Jogos...</p>
           <div class="spinner"></div>
         </div>
-        <div class="col-md-4 mb-4" *ngFor="let game of jogos">
-          <div class="game-card"(mousedown)="detalhesJogo(game.id)">
+        <div class="col-md-4 mb-4" *ngFor="let game of jogos.slice(0, 9)">
+          <div class="game-card" (mousedown)="detalhesJogo(game.id)">
             <div class="game-card-image">
               <img [src]="game.cover_url" [alt]="game.name" class="img-fluid">
             </div>
             <div class="game-card-content">
               <h3>{{game.name}}</h3>
               <div class="d-flex justify-content-between align-items-center">
-                <span class="genre-badge">{{game.genres}}</span>
-                <div class="rating">
+                <span class="genre-badge">{{game.genres.join(', ')}}</span>
+                <div class="rating" *ngIf="game.total_rating">
                   <i class="bi bi-star-fill"></i>
-                  {{game.total_rating|formatarNota}}
+                  {{game.total_rating | formatarNota}}
                 </div>
               </div>
-              <div class="price mt-2">{{game.price}}</div>
             </div>
           </div>
         </div>
       </div>
     </div>
   </section>
+
   <!-- Categories Grid -->
-  <!-- <section id="categories" class="categories-section py-5">
-    <div class="container">
-      <h2 class="section-title mb-4">Categorias</h2>
-      <div class="loading-container" *ngIf="categoriasCarregando">
-        <p>Carregando Categorias...</p>
-        <div class="spinner"></div>
-      </div>
-      <div class="categories-grid" *ngIf="categorias.length>0">
-        <div class="category-item" *ngFor="let category of categorias">
-          <div class="category-content">
-            <button (click)="voltar(category)" 
-            [disabled]="category.startIndex === 0" 
-            class="carousel-button left">
-              &lt;
-            </button>
-            <i class="bi bi-controller"> | {{category.value.genre}}</i>
-             <div class="d-flex">
-              <div class="game-card-categories" (mousedown)="detalhesJogo(game.id)" *ngFor="let game of category.value.games.slice(category.startIndex, category.startIndex+5)">
-                <img [src]="game.cover_url" alt="">
-                <h5>{{game.name}}</h5>
-                <div class="rating">
-                  <i class="bi bi-star-fill"></i>
-                  {{game.total_rating|formatarNota}}
-                </div>
-              </div>
-            </div>
-            <button (click)="avancar(category)" 
-            [disabled]="category.startIndex + 5 >= category.value.games.length" 
-            class="carousel-button right">
-              &gt;
-            </button>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section> -->
-  
   <section id="categories" class="categories-section py-5">
     <div class="container">
       <h2 class="section-title">Categorias</h2>
@@ -104,7 +67,7 @@
               <div 
                 class="game-card-categories" 
                 (mousedown)="detalhesJogo(game.id)" 
-                *ngFor="let game of category.value.games">
+                *ngFor="let game of category.value.games.slice(0,10)">
                 <img [src]="game.cover_url" alt="{{game.name}} Cover">
                 <div class="game-details">
                   <h5>{{game.name}}</h5>

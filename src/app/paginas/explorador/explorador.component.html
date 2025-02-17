@@ -1,0 +1,219 @@
+<section class="explorer-section">
+    <div class="container">
+      <h1 class="section-title">Explorador de Jogos</h1>
+      
+      <!-- Barra de busca e filtros -->
+      <div class="search-filters-container">
+        <div class="search-bar">
+          <i class="bi bi-search"></i>
+          <input 
+          [(ngModel)]="searchTerm"
+          (input)="onSearch()"
+          placeholder="Buscar jogos..."
+          class="form-control">
+        </div>
+        
+        <div class="filters-row">
+
+          <div class="filter-group genre-filter-container custom-filter">
+            <label>Gêneros</label>
+            <div class="genre-dropdown"
+                 (mouseenter)="!isMobile && openDropdown('genre')"
+                 (mouseleave)="!isMobile && closeDropdown('genre')"
+                 (click)="isMobile && toggleDropdown('genre')">
+              
+              <!-- Controle principal -->
+              <div class="dropdown-control" [class.expanded]="activeDropdown === 'genre'">
+                <div class="form-check select-all" (click)="$event.stopPropagation()">
+                  <input 
+                    type="checkbox" 
+                    id="select-all-genres"
+                    [checked]="allGenresSelected"
+                    (change)="toggleAllGenres()"
+                    class="form-check-input"
+                    > 
+                  <label for="select-all-genres" class="form-check-label">
+                    <span class="custom-checkbox"></span>
+                    <span class="selected-text">Todos os Gêneros</span>
+                  </label>
+                  <span class="dropdown-arrow"></span>
+                </div>
+                
+                <!-- Dropdown flutuante -->
+                <div class="genre-checkboxes-dropdown" [class.open]="activeDropdown === 'genre'">
+                  <div class="genre-checkboxes">
+                    <div *ngFor="let genre of genres" 
+                         class="form-check option-genre"
+                         (click)="toggleGenre(genre)"
+                         (click)="$event.stopPropagation()"
+                         >
+                      <input 
+                        type="checkbox" 
+                        [id]="'genre-' + genre" 
+                        [value]="genre" 
+                        [(ngModel)]="selectedGenres[genre]"
+                        class="form-check-input"
+                        > 
+                      <label [for]="'genre-' + genre" class="form-check-label">
+                        <span class="custom-checkbox"></span>
+                        <span class="label-text">{{genre}}</span>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+                  <!-- Novo Filtro de Avaliação -->
+          <div class="filter-group rating-filter-container custom-filter">
+            <label>Avaliação</label>
+            <div class="rating-dropdown"
+                (mouseenter)="!isMobile && openDropdown('rating')"
+                (mouseleave)="!isMobile && closeDropdown('rating')"
+                (click)="isMobile && toggleDropdown('rating')">
+              <div class="dropdown-control" [class.expanded]="activeDropdown === 'rating'">
+                <div class="form-check select-all">
+                  <span class="selected-text">
+                    {{ getRatingLabel(selectedRating) }}
+                  </span>
+                  <span class="dropdown-arrow"></span>
+                </div>
+                
+                <div class="rating-options-dropdown" [class.open]="activeDropdown === 'rating'">
+                  <div class="rating-options">
+                    <div *ngFor="let option of ratingOptions" 
+                        class="form-check option-item"
+                        (click)="selectRating(option.value)">
+                      <span class="custom-radio" [class.checked]="option.value === selectedRating"></span>
+                      <span class="label-text">{{ option.label }}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+          
+                    <!-- Novo Filtro de Ordenação -->
+            <div class="filter-group sort-filter-container custom-filter">
+                <label>Ordenar por</label>
+                <div class="sort-dropdown"
+                    (mouseenter)="!isMobile && openDropdown('sort')"
+                    (mouseleave)="!isMobile && closeDropdown('sort')"
+                    (click)="isMobile && toggleDropdown('sort')">
+                  <div class="dropdown-control" [class.expanded]="activeDropdown === 'sort'">
+                    <div class="form-check select-all">
+                      <span class="selected-text">
+                        {{ getSortLabel(sortBy) }}
+                      </span>
+                      <span class="dropdown-arrow"></span>
+                    </div>
+                    
+                    <div class="sort-options-dropdown" [class.open]="activeDropdown === 'sort'">
+                      <div class="sort-options">
+                        <div *ngFor="let option of sortOptions" 
+                            class="form-check option-item"
+                            (click)="selectSort(option.value)">
+                          <span class="custom-radio" [class.checked]="option.value === sortBy"></span>
+                          <span class="label-text">{{ option.label }}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+        </div>
+      </div>
+  
+      <!-- Loading -->
+      <div class="loading-container" *ngIf="loading">
+        <div class="loading-content">
+          <div class="neon-spinner">
+            <div class="spinner-core"></div>
+            <div class="spinner-aura"></div>
+          </div>
+          <div class="loading-text">
+            <span class="loading-dots">Buscando jogos</span>
+            <!-- PROGRESS BAR, CASO EU QUEIRA USAR NO FUTURO
+            <div class="loading-progress">
+              <div class="progress-bar"></div>
+              <div class="progress-bar progress-bar-delayed"></div>
+            </div> 
+            -->
+          </div>
+        </div>
+      </div>
+  
+      <!-- Grid de jogos -->
+      <div class="games-grid" *ngIf="!loading">
+        <div class="row">
+          <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
+            <div class="game-card" (mousedown)="detalhesJogo(game.id)">
+              <div class="game-card-image">
+                <img [src]="game.cover_url" [alt]="game.name" class="img-fluid">
+              </div>
+              <div class="game-card-content">
+                <h3>{{game.name}}</h3>
+                <div class="d-flex justify-content-between align-items-center">
+                  <span class="genre-badge">{{game.genres.join(', ')}}</span>
+                  <div class="rating" *ngIf="game.total_rating">
+                    <i class="bi bi-star-fill"></i>
+                    {{game.total_rating | formatarNota}}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+  
+        <!-- Paginação -->
+        <div class="pagination-container" *ngIf="filteredGames.length > itemsPerPage">
+          <button 
+            class="btn btn-outline-neon" 
+            [disabled]="currentPage === 1"
+            (click)="changePage(currentPage - 1)">
+            <i class="bi bi-chevron-left"></i>
+          </button>
+          
+          <span class="page-info">
+            Página {{currentPage}} de {{totalPages}}
+          </span>
+          
+          <button 
+            class="btn btn-outline-neon" 
+            [disabled]="currentPage === totalPages"
+            (click)="changePage(currentPage + 1)">
+            <i class="bi bi-chevron-right"></i>
+          </button>
+        </div>
+      </div>
+  
+      <!-- Mensagem de nenhum resultado -->
+      <!-- <div class="no-results" *ngIf="!loading && filteredGames.length === 0">
+        <i class="bi bi-emoji-frown"></i>
+        <p>Nenhum jogo encontrado com os filtros selecionados.</p>
+        <button class="btn btn-neon" (click)="clearFilters()">
+          Limpar Filtros
+        </button>
+      </div> -->
+      
+      <!-- Substitua a seção de nenhum resultado por: -->
+
+         <!-- ESTUDAR ESTA ALTERAÇÃO -->
+      <div class="no-results" *ngIf="!loading && (filteredGames.length === 0 || showNoGenresMessage)">
+        <i class="bi bi-emoji-frown" *ngIf="!showNoGenresMessage"></i>
+        <i class="bi bi-filter-circle" *ngIf="showNoGenresMessage"></i>
+        
+        <p *ngIf="showNoGenresMessage">
+          Selecione pelo menos um gênero para visualizar os jogos
+        </p>
+        
+        <p *ngIf="!showNoGenresMessage && filteredGames.length === 0">
+          Nenhum jogo encontrado com os filtros selecionados
+        </p>
+        <button class="btn btn-neon" (click)="toggleAllGenres()" *ngIf="showNoGenresMessage">
+          Selecionar Todos
+        </button>
+      </div>
+    </div>
+  </section>

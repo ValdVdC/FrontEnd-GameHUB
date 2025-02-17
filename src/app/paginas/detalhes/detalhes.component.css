@@ -135,7 +135,8 @@ section {
   margin: 10px 0;
 }
 .platform {
-  display: flex;
+  position: relative;
+  display: inline-block;
   justify-content: center;
   align-items: center;
   background: linear-gradient(135deg, #aabce2, #7ea9e6);
@@ -157,6 +158,27 @@ section {
   justify-content: center;
   align-items: center;
   transform: scale(0.9);
+}
+
+.tooltip {
+  visibility: hidden;
+  background-color: black;
+  color: white;
+  text-align: center;
+  padding: 5px;
+  border-radius: 5px;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  white-space: nowrap;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.platform:hover .tooltip {
+  visibility: visible;
+  opacity: 1;
 }
 /* Estilização do container de vídeos */
 .videos {

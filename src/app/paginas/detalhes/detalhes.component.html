@@ -28,7 +28,8 @@
             </div>
              <div class="game-card-platform">
               <div class="platform" *ngFor="let platformInfo of info.platforms_info">
-                <img [src]="platformInfo.logo_url" alt="" class="img-fluid platform-logo">
+                <img [src]="platformInfo.logo_url" [alt]=platformInfo.name class="img-fluid platform-logo">
+                <span class="tooltip">{{platformInfo.name}}</span>
               </div>
             </div> 
           </div>

@@ -12,6 +12,7 @@ import { DetalhesComponent } from './paginas/detalhes/detalhes.component';
 import { FormsModule } from '@angular/forms';
 import { SafeVideoUrlPipe } from './pipes/safe-video-url.pipe';
 import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
+import { ExploradorComponent } from './paginas/explorador/explorador.component';
 
 
 @NgModule({
@@ -23,6 +24,7 @@ import { NgbModule } from '@ng-bootstrap/ng-bootstrap';
     FormatarNotaPipe,
     DetalhesComponent,
     SafeVideoUrlPipe,
+    ExploradorComponent,
   ],
   imports: [
     BrowserModule,
