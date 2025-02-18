@@ -44,16 +44,17 @@
                   <div class="genre-checkboxes">
                     <div *ngFor="let genre of genres" 
                          class="form-check option-genre"
-                         (click)="toggleGenre(genre)"
-                         (click)="$event.stopPropagation()"
+                         (click)="toggleGenre(genre);$event.stopPropagation()"
+                      
                          >
-                      <input 
-                        type="checkbox" 
-                        [id]="'genre-' + genre" 
-                        [value]="genre" 
-                        [(ngModel)]="selectedGenres[genre]"
-                        class="form-check-input"
-                        > 
+                         <input 
+                         type="checkbox" 
+                         [id]="'genre-' + genre" 
+                         [value]="genre" 
+                         [checked]="selectedGenres[genre]"
+                         (change)="toggleGenre(genre)"
+                         class="form-check-input"
+                      >
                       <label [for]="'genre-' + genre" class="form-check-label">
                         <span class="custom-checkbox"></span>
                         <span class="label-text">{{genre}}</span>
@@ -150,7 +151,7 @@
           <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
             <div class="game-card" (mousedown)="detalhesJogo(game.id)">
               <div class="game-card-image">
-                <img [src]="game.cover_url" [alt]="game.name" class="img-fluid">
+                <img [src]="game.cover_url" [alt]="game.name" class="img-fluid" loading="lazy">
               </div>
               <div class="game-card-content">
                 <h3>{{game.name}}</h3>
@@ -200,18 +201,20 @@
       <!-- Substitua a seção de nenhum resultado por: -->
 
          <!-- ESTUDAR ESTA ALTERAÇÃO -->
-      <div class="no-results" *ngIf="!loading && (filteredGames.length === 0 || showNoGenresMessage)">
-        <i class="bi bi-emoji-frown" *ngIf="!showNoGenresMessage"></i>
-        <i class="bi bi-filter-circle" *ngIf="showNoGenresMessage"></i>
+      <!-- No template, ajuste a condição: -->
+      <div class="no-results" *ngIf="!loading && filteredGames.length === 0">
+        <i class="bi bi-emoji-frown" *ngIf="hasSelectedGenres"></i>
+        <i class="bi bi-filter-circle" *ngIf="!hasSelectedGenres"></i>
         
-        <p *ngIf="showNoGenresMessage">
+        <p *ngIf="!hasSelectedGenres">
           Selecione pelo menos um gênero para visualizar os jogos
         </p>
         
-        <p *ngIf="!showNoGenresMessage && filteredGames.length === 0">
+        <p *ngIf="hasSelectedGenres">
           Nenhum jogo encontrado com os filtros selecionados
         </p>
-        <button class="btn btn-neon" (click)="toggleAllGenres()" *ngIf="showNoGenresMessage">
+        
+        <button class="btn btn-neon" (click)="toggleAllGenres()">
           Selecionar Todos
         </button>
       </div>

@@ -236,21 +236,20 @@ export class ExploradorComponent {
     // Carregamento de gêneros para filtros
     private async loadGenres() {
       try {
-        const response = await lastValueFrom(this.apiService.buscarCategorias());
-        this.genres = response.map((category: any) => category.value.genre);
-        
-        // Inicializa com todos os gêneros selecionados
-        this.selectedGenres = this.genres.reduce((acc, genre) => {
-          acc[genre] = true;
-          return acc;
-        }, {} as { [key: string]: boolean });
-    
-        // Força a validação inicial
-        this.updateAllSelected();
+          const response = await lastValueFrom(this.apiService.buscarCategorias());
+          this.genres = response.map((category: any) => category.value.genre);
+          
+          // Inicializa todos desmarcados e depois marca todos
+          this.selectedGenres = this.genres.reduce((acc, genre) => {
+              acc[genre] = true; // Começa com todos selecionados
+              return acc;
+          }, {} as { [key: string]: boolean });
+          
+          this.applyFilters();
       } catch (error) {
-        console.error('Erro ao carregar gêneros:', error);
+          console.error('Erro ao carregar gêneros:', error);
       }
-    }
+  } 
   
     // Busca de jogos
     onSearch() {
@@ -288,23 +287,22 @@ export class ExploradorComponent {
     }
 
     private filterByGenres(games: any[]): any[] {
-      // Verifica se há gêneros selecionados
       const selectedGenresList = Object.entries(this.selectedGenres || {})
-        .filter(([_, selected]) => selected)
-        .map(([genre]) => genre);
-    
-      // Se não houver gêneros selecionados, retorna todos os jogos
+          .filter(([_, selected]) => selected)
+          .map(([genre]) => genre);
+  
       if (selectedGenresList.length === 0) {
-        return games;
+          return []; // Retorna array vazio quando nenhum gênero selecionado
       }
-    
-      // Filtra os jogos com verificação de segurança
+  
       return games.filter(game => 
-        Array.isArray(game.genres) && 
-        selectedGenresList.some(genre => game.genres.includes(genre))
+          Array.isArray(game.genres) && 
+          selectedGenresList.some(genre => game.genres.includes(genre))
       );
-    }
-
+  }
+  get hasSelectedGenres(): boolean {
+    return Object.values(this.selectedGenres).some(value => value);
+}
     
     toggleGenre(genre: string) {
       this.selectedGenres[genre] = !this.selectedGenres[genre];
@@ -360,16 +358,7 @@ export class ExploradorComponent {
       this.router.navigate(['/detalhes', gameId]);
     }
   
-    // Limpar filtros
-    clearFilters() {
-      this.selectedGenres = this.genres.reduce((acc, genre) => {
-        acc[genre] = false;
-        return acc;
-      }, {} as { [key: string]: boolean });
-      this.selectedRating = '';
-      this.sortBy = 'relevance';
-      this.applyFilters();
-    }
+    
 
     // Adicione estas propriedades
 get allGenresSelected(): boolean {
@@ -378,9 +367,7 @@ get allGenresSelected(): boolean {
 
 toggleAllGenres() {
   const newState = !this.allGenresSelected;
-  for (const genre of this.genres) {
-    this.selectedGenres[genre] = newState;
-  }
+  this.genres.forEach(genre => this.selectedGenres[genre] = newState);
   this.applyFilters();
 }
 
