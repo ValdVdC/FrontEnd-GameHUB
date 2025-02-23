@@ -9,9 +9,7 @@
     box-shadow: 0 2px 15px rgba(0, 0, 0, 0.1);
   }
   
-.game-card img{
-  padding-bottom: 8px;
-}
+
 .game-card-overlay button {
     margin-top: 8px; /* Distância da base do card */
   }

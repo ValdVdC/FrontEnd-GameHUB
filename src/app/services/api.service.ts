@@ -12,15 +12,15 @@ export class ApiService {
   constructor(private http: HttpClient) {}
   
   buscarJogos(): Observable<any>{
-    return this.http.get(`${this.apiUrl}/games`);
+    return this.http.get(this.apiUrl);
   }
   buscarCategorias(): Observable<any>{
-    return this.http.get(`${this.apiUrl}/games/genres`);
+    return this.http.get(`${this.apiUrl}/genres`);
   }
   getJogoDetalhes(id:number):Observable<any>{
-    return this.http.get(`${this.apiUrl}/game/${id}`)
+    return this.http.get(`${this.apiUrl}/${id}`)
   }
   buscarJogoPorNome(nome:string):Observable<any>{
-    return this.http.get(`${this.apiUrl}/game/search/${nome}`)
+    return this.http.get(`${this.apiUrl}/search/${nome}`)
   }
 }
