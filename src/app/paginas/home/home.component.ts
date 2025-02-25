@@ -2,6 +2,7 @@ import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ScrollService } from '../../services/scroll.service';
 import { Router } from '@angular/router';
+import { ApiResponse, Game, GenreCategory } from '../../models/game.model';
 
 @Component({
   selector: 'app-home',
@@ -10,8 +11,8 @@ import { Router } from '@angular/router';
 })
 export class HomeComponent implements OnInit, OnDestroy, AfterViewInit{
 
-  jogos:any[] = [];
-  categorias:any[] = [];
+  jogos:Game[] = [];
+  categorias:GenreCategory[] = [];
   jogosMomentoCarregando:boolean = true
   categoriasCarregando:boolean = true
 
@@ -25,41 +26,40 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit{
     this.buscarJogos();
     this.buscarCategorias();
   }
-  buscarJogos():void{
-    this.jogosMomentoCarregando = true
+
+  buscarJogos(): void {
+    this.jogosMomentoCarregando = true;
     this.apiService.buscarJogos().subscribe({
-      next:(data:any)=>{
-        this.jogos =data
-        console.log('Jogos: ',data)
+      next: (data: ApiResponse) => { // Use ApiResponse
+        this.jogos = data.games; // Acesse a propriedade games
       },
-      error:(error:any)=>{
-        console.log('Erro ao buscar',error)
+      error: (error: any) => {
+        console.log('Erro ao buscar', error);
       },
-      complete:()=>{
-        this.jogosMomentoCarregando = false
-        this.iniciarObservador()
+      complete: () => {
+        this.jogosMomentoCarregando = false;
+        this.iniciarObservador();
       }
-    }) 
+    });
   }
 
-  buscarCategorias():void{
-    this.categoriasCarregando = true
+  buscarCategorias(): void {
+    this.categoriasCarregando = true;
     this.apiService.buscarCategorias().subscribe({
-      next:(data:any)=>{
-        this.categorias = data.map((category:any)=>({
+      next: (data: GenreCategory[]) => { // Use GenreCategory
+        this.categorias = data.map(category => ({
           ...category,
           startIndex: 0
-        }))
-        console.log('Generos: ',data)
+        }));
       },
-      error:(error:any)=>{
-        console.log('Erro ao buscar',error)
+      error: (error: any) => {
+        console.log('Erro ao buscar', error);
       },
-      complete:()=>{
-        this.categoriasCarregando = false
-        this.iniciarObservador()
+      complete: () => {
+        this.categoriasCarregando = false;
+        this.iniciarObservador();
       }
-    })
+    });
   }
 
   avancar(category:any){

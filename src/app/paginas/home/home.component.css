@@ -1,158 +1,395 @@
-.hero-section {
-    height: 100vh;
-    background: linear-gradient(135deg, rgba(13, 13, 14, 0.5), rgba(43, 17, 65, 0.5));
-    background-size: cover;
-    background-position: center;
-    color: white;
-  }
-  
-.feature-icon {
-    font-size: 2.5rem;
-    margin-bottom: 1rem;
-    color: #0d6efd;
-  }
-  
-.game-card {
-    transition: transform 0.3s ease;
-    border: none;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
-    padding: 8px;
-    height: 100%;
-  }
-  
-.game-card:hover {
-    transform: translateY(-5px);
-    transform: scale(1.02);
-    color: #74efff;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.75);
-    cursor: pointer;
-  }
-.game-card img{
-  transform: scale(0.9);
+/* ==============================================
+   1. RESETS E ESTILOS GLOBAIS
+============================================== */
+/* Previne seleção em elementos interativos */
+.game-card,
+.game-card-categories,
+.game-card img,
+.game-card-categories img,
+.game-title,
+.game-details,
+.genre-badge,
+.rating,
+.section-title,
+.category-genre {
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
-.game-card-overlay button {
-    margin-top: 8px; /* Distância da base do card */
-}
+
+/* ==============================================
+   2. LAYOUT E GRID
+============================================== */
 section {
-    padding-top: 80px;
-    padding-bottom: 80px;
-  }
-  
+  padding-top: 80px;
+  padding-bottom: 80px;
+}
 
-  @media (max-width: 768px) {
-    .hero-section {
-      height: 60vh;
-    }
-    
-    .display-4 {
-      font-size: 2.5rem;
-    }
-    
-    section {
-      padding-top: 40px;
-      padding-bottom: 40px;
-    }
-  }
-
-.loading-container {
-    text-align: center;
-    margin: 20px auto;
-  }
-  
-.spinner {
-    margin: 20px auto;
-    width: 40px;
-    height: 40px;
-    border: 5px solid #3c4550;
-    border-top: 5px solid #74efff;
-    border-radius: 50%;
-    animation: spin 1s linear infinite;
-  }
-  
-  @keyframes spin {
-    0% {
-      transform: rotate(0deg);
-    }
-    100% {
-      transform: rotate(360deg);
-    }
-  }
-  .genre-badge{
-    flex: 1;
-    min-width: 0;
-    word-wrap: break-word; 
-    overflow-wrap: break-word;
-    white-space: normal; 
-    word-break: keep-all;
-    margin-right: auto; 
-  }
-  .rating i.bi-star-fill {
-    color: #74efff;
-    margin-right: 4px;
-  }
-  .bi{
-    font-size: 24px;
-  }
-  
-  /* Estilização do Carrossel de Categorias */
-.game-card-categories {
-    transition: all 0.3s ease;
-    border: none;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
-    padding: 8px;
-    margin-top: 8px;
-    margin-bottom: 8px;
-    width: 100%;
-    max-width: 300px;
-    height: 400px;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: space-between;
-    overflow: hidden;
-    flex: 0 0 250px;
-    background-color: #0f3460;
-    border-radius: 15px;
-    overflow: hidden;
-    scroll-snap-align: center;
-}
-.game-card-categories:hover {
-    transform: translateY(-5px) scale(1.02);
-    background-color: #0c2d55;
-    color: #74efff;
-    cursor: pointer;
-    box-shadow: 0 10px 20px rgba(0, 0, 0, 0.4);
-}
-.game-card-categories img{
-  transform: scale(0.9);
-  border-radius: 8px;
-  width: 100%;
-  height: 300px;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-}
-.categories-section {
-  background-color: #0e0e20;
-  color: #fff;
-  padding: 40px 0;
+.section-title-container {
+  text-align: center;
+  margin-bottom: 30px;
 }
 
 .section-title {
-  color: #74efff;
+  color: #fff;
   text-align: center;
-  margin-bottom: 30px;
+  margin-bottom: 40px;
   font-weight: bold;
+  position: relative;
+  display: inline-block;
+  padding-bottom: 15px;
+}
+
+.section-title::after {
+  content: '';
+  position: absolute;
+  bottom: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 100%;
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(116, 239, 255, 0.7), 
+    transparent);
+}
+
+/* ==============================================
+   3. COMPONENTES BASE
+============================================== */
+/* Ícones */
+.bi {
+  font-size: 24px;
+}
+
+.feature-icon {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #0d6efd;
+}
+
+/* Divider */
+.divider {
+  height: 1px;
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(116, 239, 255, 0.7), 
+    transparent);
+  margin: 8px 0 12px;
+}
+
+/* Loading e Elementos de UI */
+.loading-container {
+  text-align: center;
+  margin: 20px auto;
+}
+
+.spinner {
+  margin: 20px auto;
+  width: 40px;
+  height: 40px;
+  border: 5px solid #3c4550;
+  border-top: 5px solid #74efff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+/* Badges para Gêneros */
+.genre-container {
+  max-width: 70%;
+  position: relative;
+}
+
+.genre-badge {
+  font-size: 0.85rem;
+  color: rgba(255, 255, 255, 0.8);
+  background-color: rgba(22, 33, 62, 0.8);
+  border: 1px solid rgba(116, 239, 255, 0.2);
+  border-radius: 12px;
+  padding: 2px 8px;
+  margin-right: 4px;
+  transition: all 0.25s ease;
+  cursor: pointer;
+  display: inline-block;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  max-width: 100%;
+}
+
+/* Rating Badge */
+.rating {
+  font-size: 0.85rem;
+  display: flex;
+  align-items: center;
+  background-color: rgba(116, 239, 255, 0.15);
+  border-radius: 12px;
+  padding: 2px 8px;
+  margin-left: 5px;
+  white-space: nowrap;
+}
+
+.rating i {
+  color: #74efff;
+  margin-right: 4px;
+  font-size: 0.8rem;
+}
+
+.rating i.bi-star-fill {
+  color: #74efff;
+  margin-right: 4px;
+}
+
+/* ==============================================
+   4. COMPONENTES ESPECÍFICOS
+============================================== */
+/* Game Card - Estilo Base */
+.game-card {
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  background-color: rgba(22, 33, 62, 0.8);
+  border-radius: 10px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.game-card-image {
+  position: relative;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 12px;
+}
+
+.game-card-image img {
+  transform: scale(0.95);
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  border-radius: 6px;
+  transition: transform 0.3s ease;
+}
+
+.game-card-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  padding: 5px 2px;
+}
+
+.game-title-container {
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 8px;
+  overflow: hidden;
+}
+
+.game-title {
+  font-size: 1.5rem;
+  font-weight: 600;
+  text-align: center;
+  margin: 0;
+  transition: color 0.3s ease;
+  display: -webkit-box;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  width: 100%;
+}
+
+.game-details {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: auto;
+  margin-bottom: auto;
+  min-height: 30px;
+}
+
+.game-details h5 {
+  margin: 0;
+  font-size: 1rem;
+  flex-grow: 1;
+  text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.game-card-overlay button {
+  margin-top: 8px;
+}
+
+/* Game Cards para Categorias */
+.game-card-categories {
+  transition: all 0.3s ease;
+  border: none;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  padding: 12px;
+  margin: 8px;
+  width: 100%;
+  max-width: 250px;
+  height: 400px; /* Altura fixa para todos os cards */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  overflow: visible; /* Permite que o título se expanda */
+  flex: 0 0 220px;
+  background-color: rgba(22, 33, 62, 0.8);
+  border-radius: 12px;
+  scroll-snap-align: center;
+  position: relative;
+}
+
+.game-card-categories .img-container {
+  width: 100%;
+  height: 260px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.game-card-categories img {
+  transform: scale(0.9);
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  border-radius: 8px;
+  transition: transform 0.3s ease;
+}
+
+.game-card-categories .title-container {
+  width: 100%;
+  height: 80px; /* Altura fixa para todos os títulos */
+  padding: 0 5px;
+  display: flex;
+  align-items: center; /* Centraliza verticalmente */
+  justify-content: center;
+  margin-bottom: 10px; /* Reduzido para ficar mais próximo do rating */
+}
+
+.game-card-categories .game-details {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center; /* Centraliza verticalmente */
+  height: 100%; /* Ocupa todo o espaço da title-container */
+}
+
+.game-card-categories .game-details h5 {
+  margin: 0;
+  font-size: 0.95rem;
+  text-align: center;
+  width: 100%;
+  word-wrap: break-word;
+}
+
+.game-card-categories .rating {
+  position: absolute;
+  bottom: 15px;
+  left: 50%;
+  transform: translateX(-50%);
+  margin: 0;
+  background-color: rgba(116, 239, 255, 0.15);
+  border-radius: 12px;
+  padding: 2px 8px;
+  display: flex;
+  align-items: center;
+  z-index: 5;
+  margin-top: 8px;
+  margin-left: 0;
+}
+
+/* Container de Jogos do Carrossel */
+.games-container {
+  width: 100%;
+  display: flex;
+  gap: 15px;
+  overflow-x: auto;
+  padding: 10px 0 20px;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  justify-content: flex-start;
+  align-items: stretch;
+}
+
+/* Scrollbar personalizada */
+.games-container::-webkit-scrollbar {
+  height: 8px;
+}
+
+.games-container::-webkit-scrollbar-track {
+  background: rgba(22, 33, 62, 0.5);
+  border-radius: 10px;
+}
+
+.games-container::-webkit-scrollbar-thumb {
+  background: linear-gradient(90deg, #5ba9ce, #74efff);
+  border-radius: 10px;
+  border: 2px solid rgba(22, 33, 62, 0.5);
+}
+
+/* ==============================================
+   5. SEÇÕES DA PÁGINA
+============================================== */
+/* Seção Hero */
+.hero-section {
+  height: 100vh;
+  background: linear-gradient(
+    180deg,
+    #0d0815 0%, 
+    #1d0c35b6 50%,
+    #23083ac2 100%
+  );
+  background-size: cover;
+  background-position: center;
+  color: white;
+}
+.games-section{
+  background: linear-gradient(
+    180deg,
+    #23083ac2 0%,    /* Herda final do hero */
+    #10192c 30%,   /* Azul noturno */
+    #0a1428 100%
+  );
+}
+/* Seção de Categorias */
+.categories-section {
+  background: linear-gradient(
+    180deg,
+    #0a1428 0%,    /* Herda final de games */
+    #1c132c 40%,   /* Roxo-ardósia */
+    #1d0d29 100%
+  );
+  color: #fff;
+  padding: 40px 0;
 }
 
 .category-content {
   display: flex;
   flex-direction: column;
   align-items: center;
-  background-color: #16213e;
+  background: linear-gradient(145deg, rgba(13, 19, 36, 0.85), rgba(15, 23, 42, 0.95));
   border-radius: 15px;
   padding: 20px;
   margin-bottom: 20px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(116, 239, 255, 0.05);
+  transition: text-shadow 0.3s ease; 
 }
+
 
 .category-genre {
   display: flex;
@@ -162,6 +399,22 @@ section {
   gap: 10px;
   width: 100%;
   text-align: center;
+  color: #74efff;
+  letter-spacing: 2px; 
+  text-shadow: 
+  0 0 3px rgba(116, 239, 255, 0.4),
+  0 0 6px rgba(116, 239, 255, 0.3),
+  0 0 9px rgba(116, 239, 255, 0.2),
+  0 0 12px rgba(116, 239, 255, 0.1);
+  transition: text-shadow 0.3s ease; 
+}
+
+.category-content:hover .category-genre{
+  text-shadow: 
+    0 0 3px rgba(116, 239, 255, 0.5),
+    0 0 6px rgba(116, 239, 255, 0.4),
+    0 0 9px rgba(116, 239, 255, 0.3),
+    0 0 12px rgba(116, 239, 255, 0.2);
 }
 
 .category-genre i {
@@ -176,56 +429,98 @@ section {
   margin-bottom: 20px;
 }
 
-.games-container {
-  width: 100%;
-  display: flex;
-  gap: 20px;
-  overflow-x: auto;
-  padding-bottom: 20px;
-  scroll-snap-type: x mandatory;
-  scroll-behavior: smooth;
-  justify-content: space-between; 
+.community-section{
+  background: linear-gradient(
+    180deg,
+    #1d0d29,    /* Herda final de categories */
+    #26163893 60%,   /* Azul metálico escuro */
+    #1a0d30 100%
+  );
+}
+/* ==============================================
+   6. ANIMAÇÕES E EFEITOS
+============================================== */
+@keyframes spin {
+  0% {
+    transform: rotate(0deg);
+  }
+  100% {
+    transform: rotate(360deg);
+  }
 }
 
-.game-card-categories .game-details {
-  display: flex;
-  align-items: center;
-  padding: 15px;
-  justify-content: space-between; 
+/* Efeitos Hover/Active */
+.game-card:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 8px 25px rgba(116, 239, 255, 0.3);
+  cursor: pointer;
 }
 
-.game-details h5 {
-  margin: 0;
-  font-size: 1rem;
-  flex-grow: 1;
-  padding-right: 8px;
+.game-card:hover .game-title {
+  color: #74efff;
 }
 
-.rating {
-  display: flex;
-  align-items: center;
-
+.game-card:hover .game-card-image img {
+  transform: scale(1);
 }
 
-.rating i {
-  margin-right: 5px;
+.game-card:hover .divider {
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(116, 239, 255, 1), 
+    transparent);
 }
 
-/* Scrollbar personalizada */
-.games-container::-webkit-scrollbar {
-  height: 10px;
+.genre-badge:hover {
+  color: #fff;
+  background-color: rgba(116, 239, 255, 0.2);
+  border-color: rgba(116, 239, 255, 0.5);
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(116, 239, 255, 0.3);
 }
 
-.games-container::-webkit-scrollbar-track {
-  background: #16213e;
+.genre-badge.active {
+  color: #0e0e20;
+  background-color: rgba(116, 239, 255, 0.85);
+  border-color: rgba(116, 239, 255, 1);
+  font-weight: 500;
 }
 
-.games-container::-webkit-scrollbar-thumb {
-  background-color: #74efff;
-  border-radius: 20px;
+.game-card-categories:hover {
+  transform: translateY(-5px) scale(1.02);
+  box-shadow: 0 4px 8px rgba(116, 239, 255, 0.3);
+  cursor: pointer;
 }
 
+.game-card-categories:hover h5 {
+  color: #74efff;
+}
+
+.game-card-categories:hover img {
+  transform: scale(0.95);
+}
+
+.games-container::-webkit-scrollbar-thumb:hover {
+  background: linear-gradient(90deg, #74efff, #5ba9ce);
+}
+
+/* ==============================================
+   7. MEDIA QUERIES
+============================================== */
 @media (max-width: 768px) {
+  .hero-section {
+    height: 90vh;
+  }
+  
+  .display-4 {
+    font-size: 2.5rem;
+  }
+  
+  section {
+    padding-top: 40px;
+    padding-bottom: 40px;
+  }
+  
   .games-container {
     gap: 10px;
   }
@@ -233,4 +528,10 @@ section {
   .game-card-categories {
     flex: 0 0 200px;
   }
+
+  .genre-badge {
+    font-size: 1rem;
+    padding: 1px 6px;
+  }
 }
+

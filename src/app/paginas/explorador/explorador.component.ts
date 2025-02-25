@@ -2,16 +2,20 @@ import { Component, HostListener } from '@angular/core';
 import { debounceTime, distinctUntilChanged, lastValueFrom, Subject, takeUntil } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
+import { Game } from '../../models/game.model';
 
 @Component({
+  
   selector: 'app-explorador',
   templateUrl: './explorador.component.html',
   styleUrl: './explorador.component.css'
+  
 })
+
 export class ExploradorComponent {
     // Propriedades de estado
-    games: any[] = [];
-    filteredGames: any[] = [];
+    games: Game[] = [];
+    filteredGames: Game[] = [];
     genres: string[] = [];
     loading: boolean = false;
     
@@ -23,8 +27,12 @@ export class ExploradorComponent {
     
     // Controle de paginação
     currentPage: number = 1;
+    apiPage: number = 1;  // Controla a paginação da API
     itemsPerPage: number = 16;
-    
+    carregandoMais: boolean = false;
+    temMaisJogos: boolean = true;
+    preLoading: boolean = false; // Novo estado para pré-carregamento
+
     // Subject para controle de busca com debounce
     private searchSubject = new Subject<string>();
     private destroy$ = new Subject<void>();
@@ -63,17 +71,48 @@ export class ExploradorComponent {
     // Carregamento inicial de jogos populares
     private async loadInitialGames() {
       try {
-        const response = await lastValueFrom(this.apiService.buscarJogos());
-        this.games = response;
-        this.filteredGames = [...this.games];
-        this.applyFilters();
+        this.apiPage = 1;
+        const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
+        this.games = response.games;
+        this.temMaisJogos = response.pagination.hasMore;
+        this.applyFilters(true);
       } catch (error) {
         console.error('Erro ao carregar jogos:', error);
       } finally {
         this.loading = false;
       }
     }
-  
+
+    private needsMoreGames(page: number): boolean {
+      const requiredGames = page * this.itemsPerPage;
+      return this.filteredGames.length < requiredGames;
+    }
+
+    async carregarMaisJogos() {
+      if (this.carregandoMais || !this.temMaisJogos) return;
+    
+      this.carregandoMais = true;
+      try {
+        const response = await lastValueFrom(
+          this.apiService.buscarJogos(this.apiPage + 1)
+        );
+        
+        // Adicione a tipagem explicitamente
+        const newGames = response.games.filter((newGame: Game) => 
+          !this.games.some((existingGame: Game) => existingGame.id === newGame.id)
+        );
+        
+        this.games = [...this.games, ...newGames];
+        this.temMaisJogos = response.pagination.hasMore;
+        this.apiPage++;
+        
+      } catch (error) {
+        console.error('Erro ao carregar mais jogos:', error);
+      } finally {
+        this.carregandoMais = false;
+      }
+    }
+
     // Carregamento de gêneros para filtros
     private async loadGenres() {
       try {
@@ -86,7 +125,7 @@ export class ExploradorComponent {
               return acc;
           }, {} as { [key: string]: boolean });
           
-          this.applyFilters();
+          this.applyFilters(true);
       } catch (error) {
           console.error('Erro ao carregar gêneros:', error);
       }
@@ -109,25 +148,25 @@ export class ExploradorComponent {
         const response = await lastValueFrom(this.apiService.buscarJogoPorNome(term));
         // Verificação de segurança para garantir que response não é undefined
         if (response) {
-          this.games = response;
+          this.games = response as Game[];
           // Certifique-se de que todos os jogos têm a propriedade genres
           this.games = this.games.map(game => ({
             ...game,
             genres: game.genres || []  // Fornece um array vazio se genres for undefined
           }));
-          this.applyFilters();
+          this.applyFilters(true);
         }
       } catch (error) {
         console.error('Erro na busca:', error);
         this.games = [];  // Reset seguro em caso de erro
-        this.applyFilters();
+        this.applyFilters(true);
       } finally {
         this.loading = false;
       }
       console.log(this.games)
     }
 
-    private filterByGenres(games: any[]): any[] {
+    private filterByGenres(games: Game[]): Game[] {
       const selectedGenresList = Object.entries(this.selectedGenres || {})
           .filter(([_, selected]) => selected)
           .map(([genre]) => genre);
@@ -142,15 +181,26 @@ export class ExploradorComponent {
       );
   }
   get hasSelectedGenres(): boolean {
-    return Object.values(this.selectedGenres).some(value => value);
-}
-    
-    toggleGenre(genre: string) {
-      this.selectedGenres[genre] = !this.selectedGenres[genre];
-      this.updateAllSelected(); // Atualiza o estado de "Todos os Gêneros"
-      this.applyFilters(); // Aplica os filtros
-    }
+    return Object.values(this.selectedGenres).some(value => value) && this.genres.length > 0;
+  }
 
+  toggleGenre(genre: string) {
+    this.selectedGenres[genre] = !this.selectedGenres[genre];
+    this.updateAllSelected();
+    
+    // Delay para garantir atualização do UI
+    setTimeout(async () => {
+      try {
+        this.loading = true;
+        await this.applyFilters(true);
+        
+        // Força nova renderização
+        this.filteredGames = [...this.filteredGames];
+      } finally {
+        this.loading = false;
+      }
+    }, 100);
+  }
 
     private filterByRating(games: any[]): any[] {
       if (!this.selectedRating) return games;
@@ -169,15 +219,36 @@ export class ExploradorComponent {
     }
     
     // Aplicação de filtros
-    applyFilters() {
+// Corrija o método applyFilters
+private async applyFilters(resetPage: boolean = true) {
+  try {
+    let currentAttempt = 0;
+    const maxAttempts = 5; // Limite máximo de tentativas
+
+    do {
       let filtered = [...this.games];
       filtered = this.filterByGenres(filtered);
       filtered = this.filterByRating(filtered);
       filtered = this.sortGames(filtered);
+      
       this.filteredGames = filtered;
+
+      if (this.filteredGames.length < this.itemsPerPage && this.temMaisJogos && currentAttempt < maxAttempts) {
+        await this.carregarMaisJogos();
+        currentAttempt++;
+      } else {
+        break;
+      }
+    } while (true);
+
+    if (resetPage) {
       this.currentPage = 1;
     }
-  
+  } catch (error) {
+    console.error('Erro ao aplicar filtros:', error);
+  }
+}
+
     // Métodos de paginação
     get pagedGames() {
       const startIndex = (this.currentPage - 1) * this.itemsPerPage;
@@ -185,15 +256,32 @@ export class ExploradorComponent {
     }
   
     get totalPages() {
-      return Math.ceil(this.filteredGames.length / this.itemsPerPage);
+      const pages = Math.ceil(this.filteredGames.length / this.itemsPerPage);
+      return pages > 0 ? pages : 1;
     }
+
+async changePage(page: number) {
+  if (page < 1 || this.carregandoMais) return;
+
+  this.loading = true; // Ativa loading geral
   
-    changePage(page: number) {
-      if (page >= 1 && page <= this.totalPages) {
-        this.currentPage = page;
-      }
+  try {
+    // Verifica se precisa carregar mais jogos para a página solicitada
+    while (this.needsMoreGames(page) && this.temMaisJogos) {
+      await this.carregarMaisJogos();
+      this.applyFilters(false); // Reaplica filtros com os novos jogos
     }
-  
+
+    // Só muda a página se tiver dados suficientes
+    if (!this.needsMoreGames(page)) {
+      this.currentPage = page;
+    }
+  } catch (error) {
+    console.error('Erro ao mudar página:', error);
+  } finally {
+    this.loading = false;
+  }
+}
     // Navegação para detalhes
     detalhesJogo(gameId: number) {
       this.router.navigate(['/detalhes', gameId]);
@@ -209,13 +297,13 @@ get allGenresSelected(): boolean {
 toggleAllGenres() {
   const newState = !this.allGenresSelected;
   this.genres.forEach(genre => this.selectedGenres[genre] = newState);
-  this.applyFilters();
+  this.applyFilters(true);
 }
 
 updateAllSelected() {
   const selectedGenresList = Object.keys(this.selectedGenres).filter(genre => this.selectedGenres[genre]);
   this.showNoGenresMessage = selectedGenresList.length === 0;
-  this.applyFilters();
+  this.applyFilters(true);
 }
 
 isMobile: boolean = false; // Flag para detectar dispositivos móveis
@@ -288,7 +376,7 @@ activeDropdown: string | null = null;
   // Métodos para seleção de opções
   selectRating(value: string) {
     this.selectedRating = value;
-    this.applyFilters();
+    this.applyFilters(true);
     if (this.isMobile) {
       this.closeDropdown('rating');
     }
@@ -296,7 +384,7 @@ activeDropdown: string | null = null;
 
   selectSort(value: string) {
     this.sortBy = value;
-    this.applyFilters();
+    this.applyFilters(true);
     if (this.isMobile) {
       this.closeDropdown('sort');
     }

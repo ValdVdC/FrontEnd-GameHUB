@@ -14,29 +14,43 @@
     <div class="hero-overlay"></div>
   </section>
   <!-- Jogos -->
-  <section id="games" class="py-5">
+  <section id="games" class="games-section py-5">
     <div class="container">
-      <h2 class="section-title mb-4">Jogos do momento</h2>
+      <div class="section-title-container">
+        <h2 class="section-title">Jogos do momento</h2>
+      </div>
       <div class="row">
         <div class="loading-container" *ngIf="jogosMomentoCarregando">
           <p>Carregando Jogos...</p>
           <div class="spinner"></div>
         </div>
         <div class="col-md-4 mb-4" *ngFor="let game of jogos.slice(0, 9)">
-          <div class="game-card" (mousedown)="detalhesJogo(game.id)">
-            <div class="game-card-image">
-              <img [src]="game.cover_url" [alt]="game.name" class="img-fluid">
+          <div class="game-card" (click)="detalhesJogo(game.id)">
+          <div class="game-card-image">
+              <img [src]="game.cover_url || 'assets/default-cover.jpg'" [alt]="game.name" class="img-fluid">
             </div>
             <div class="game-card-content">
-              <h3>{{game.name}}</h3>
-              <div class="d-flex justify-content-between align-items-center">
-                <span class="genre-badge">{{game.genres.join(', ')}}</span>
+              <!-- Título do jogo -->
+              <div class="game-title-container">
+                <h3 class="game-title">{{game.name}}</h3>
+              </div>
+              
+              <!-- Linha divisória -->
+              <div class="divider"></div>
+              
+              <!-- Área para gêneros e avaliação -->
+              <div class="game-details">
+                <div class="genre-container">
+                  <span *ngFor="let genre of game.genres" class="genre-badge">
+                    {{genre}}
+                  </span>
+                </div>
                 <div class="rating" *ngIf="game.total_rating">
                   <i class="bi bi-star-fill"></i>
                   {{game.total_rating | formatarNota}}
                 </div>
               </div>
-            </div>
+            </div> 
           </div>
         </div>
       </div>
@@ -46,14 +60,15 @@
   <!-- Categories Grid -->
   <section id="categories" class="categories-section py-5">
     <div class="container">
-      <h2 class="section-title">Categorias</h2>
-      
+      <div class="section-title-container">
+        <h2 class="section-title">Jogos por Categoria</h2>
+      </div>
       <div class="loading-container" *ngIf="categoriasCarregando">
         <p>Carregando Categorias...</p>
         <div class="spinner"></div>
       </div>
       
-      <div class="categories-grid" *ngIf="categorias.length > 0">
+      <div class="categories-container" *ngIf="categorias.length > 0">
         <div class="category-item" *ngFor="let category of categorias">
           <div class="category-content">
             <div class="carousel-navigation">
@@ -64,17 +79,18 @@
             </div>
             
             <div class="games-container">
-              <div 
-                class="game-card-categories" 
-                (mousedown)="detalhesJogo(game.id)" 
-                *ngFor="let game of category.value.games.slice(0,10)">
-                <img [src]="game.cover_url" alt="{{game.name}} Cover">
-                <div class="game-details">
-                  <h5>{{game.name}}</h5>
-                  <div class="rating">
-                    <i class="bi bi-star-fill"></i>
-                    {{game.total_rating|formatarNota}}
+              <div class="game-card-categories" (click)="detalhesJogo(game.id)" *ngFor="let game of category.value.games.slice(0,10)">
+                <div class="img-container">
+                  <img [src]="game.cover_url" alt="{{game.name}} Cover">
+                </div>
+                <div class="title-container">
+                  <div class="game-details">
+                    <h5>{{game.name}}</h5>
                   </div>
+                </div>
+                <div class="rating">
+                  <i class="bi bi-star-fill"></i>
+                  {{game.total_rating|formatarNota}}
                 </div>
               </div>
             </div>
@@ -85,9 +101,11 @@
   </section>
 
   <!-- Community Section -->
-  <section id="community" class="py-5">
+  <section id="community" class="community-section py-5">
     <div class="container">
-      <h2 class="section-title mb-4">Comunidade</h2>
+      <div class="section-title-container">
+        <h2 class="section-title mb-4">Comunidade</h2>
+      </div>
       <div class="community-stats">
         <div class="stat-item">
           <i class="bi bi-people-fill"></i>
