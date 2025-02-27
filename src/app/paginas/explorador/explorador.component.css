@@ -1,195 +1,121 @@
+/* ==============================================
+   1. LAYOUT PRINCIPAL & BACKGROUND
+============================================== */
 .explorer-section {
-    background-color: #0e0e20;
-    min-height: 100vh;
-    padding-top: 100px;
-    color: white;
-  }
-  
-  .search-filters-container {
-    background: linear-gradient(135deg, rgba(13, 13, 14, 0.8), rgba(43, 17, 65, 0.8));
-    border-radius: 15px;
-    padding: 20px;
-    margin-bottom: 30px;
-    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-  }
-  
-  .search-bar {
-    position: relative;
-    margin-bottom: 20px;
-  }
-  
-  .search-bar i {
-    position: absolute;
-    left: 15px;
-    top: 50%;
-    transform: translateY(-50%);
-    color: #74efff;
-  }
-  
-  .search-bar input {
-    background-color: rgba(22, 33, 62, 0.8);
-    border: 2px solid transparent;
-    border-radius: 8px;
-    padding: 12px 40px;
-    color: white;
-    transition: all 0.3s ease;
-  }
-  
-  .search-bar input:focus {
-    border-color: #74efff;
-    box-shadow: 0 0 10px rgba(116, 239, 255, 0.3);
-    outline: none;
-  }
-  
-  .filters-row {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-    gap: 20px;
-  }
-  
-  .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-    
-  }
-  
-  .filter-group label {
-    color: #74efff;
-    font-size: 0.9rem;
-  }
-  
-  .form-select {
-    background-color: rgba(22, 33, 62, 0.8);
-    border: 1px solid rgba(116, 239, 255, 0.3);
-    color: white;
-    cursor: pointer;
-  }
-  
-  .form-select:focus {
-    border-color: #74efff;
-    box-shadow: 0 0 10px rgba(116, 239, 255, 0.3);
-  }
-  
-  .games-grid {
-    margin-top: 30px;
-  }
-  
-  .pagination-container {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    gap: 20px;
-    margin-top: 30px;
-    padding-bottom: 30px;
-  }
-  
-  .page-info {
-    color: #74efff;
-    font-size: 0.9rem;
-  }
-  
-  .no-results {
-    text-align: center;
-    padding: 40px;
-  }
-  
-  .no-results i {
-    font-size: 3rem;
-    color: #74efff;
-    margin-bottom: 20px;
-  }
-  
-  /* Mantenha os estilos existentes do game-card */
-  .game-card {
-    transition: transform 0.3s ease;
-    border: none;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
-    padding: 8px;
-    background-color: rgba(22, 33, 62, 0.8);
-    border-radius: 8px;
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-    justify-content: space-between;
-  }
-  .game-card-content {
-    flex-grow: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-    align-items: center;
+  background-color: #0e0e20;
+  min-height: 100vh;
+  padding-top: 100px;
+  color: white;
 }
-  .game-card:hover {
-    transform: translateY(-5px) scale(1.02);
-    color: #74efff;
-    box-shadow: 0 2px 15px rgba(0, 0, 0, 0.75);
-    cursor: pointer;
-  }
-  img{
-    border-radius: 8px;
-  }
-  /* Responsividade */
-  @media (max-width: 768px) {
-    .explorer-section {
-      padding-top: 60px;
-    }
-    
-    .filters-row {
-      grid-template-columns: 1fr;
-    }
-    
-    .filter-group {
-      margin-bottom: 15px;
-    }
-  }
-  h3{
-    text-align: center;
-  }
 
+/* ==============================================
+   2. BUSCA & COMPONENTES DE FILTROS
+============================================== */
+/* Search Filters Container */
+.search-filters-container {
+  background: linear-gradient(135deg, rgba(13, 13, 14, 0.8), rgba(43, 17, 65, 0.8));
+  border-radius: 15px;
+  padding: 20px;
+  margin-bottom: 30px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+}
 
-
-
-  /*ESTUDAR ISSO AQUI ABAIXO
-
-/* Container principal */
-.genre-filter-container {
+/* Search Bar */
+.search-bar {
   position: relative;
-  z-index: 2; /* Garante que o dropdown fique acima dos outros elementos */
+  margin-bottom: 20px;
 }
 
-/* Controle do dropdown */
+.search-bar i {
+  position: absolute;
+  left: 15px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: #74efff;
+}
+
+.search-bar input {
+  background-color: rgba(22, 33, 62, 0.8);
+  border: 2px solid transparent;
+  border-radius: 8px;
+  padding: 12px 40px;
+  color: white;
+  transition: all 0.3s ease;
+}
+
+.search-bar input:focus {
+  border-color: #74efff;
+  box-shadow: 0 0 10px rgba(116, 239, 255, 0.3);
+  outline: none;
+}
+
+::placeholder {
+  color: #74efff;
+  opacity: 0.2;
+}
+
+/* Filter Groups Layout */
+.filters-row {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.filter-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.filter-group label {
+  color: #74efff;
+  font-size: 0.9rem;
+}
+
+/* ==============================================
+   3. COMPONENTES DE DROPDOWN - ESTILOS COMUNS
+============================================== */
+/* Common Dropdown Styles */
+.genre-filter-container,
+.rating-filter-container,
+.sort-filter-container {
+  position: relative;
+  z-index: 1;
+}
+
+.genre-filter-container:hover,
+.rating-filter-container:hover,
+.sort-filter-container:hover {
+  z-index: 3;
+}
+
+.genre-dropdown,
+.rating-dropdown,
+.sort-dropdown {
+  position: relative;
+}
+
 .dropdown-control {
   background-color: rgba(22, 33, 62, 0.8);
   border-radius: 8px;
   border: 1px solid rgba(116, 239, 255, 0.3);
-  padding: 8px 12px; /* Ajuste para igualar aos outros filtros */
+  padding: 8px 12px;
   transition: all 0.3s ease;
   position: relative;
-  height: 38px; /* Altura fixa para igualar aos outros filtros */
+  height: 38px;
   display: flex;
   align-items: center;
 }
 
-.form-check {
-  padding-left: 0; /* Remove padding padrão do Bootstrap */
-  margin-left: 12px; /* Compensa o margin negativo do container */
+.dropdown-control:hover {
+  background-color: rgba(22, 33, 62, 0.4);
 }
 
+.selected-text {
+  flex-grow: 1;
+  color: #74efff;
+}
 
-/* Ajuste no label para acomodar a seta */
-.form-check-label {
-  display: flex;
-  margin-bottom: 0;
-  padding-right: 24px; /* Adiciona espaço à direita para a seta */
-  align-items: center;
-  margin-left: -4px; /* Ajuste fino para alinhar o texto */
-}
-/* Container do checkbox "Todos os Gêneros" */
-.select-all {
-  margin-left: 8px; /* Alinhamento específico para o primeiro item */
-}
-/* Seta do dropdown */
 .dropdown-arrow {
   display: inline-block;
   margin-left: 16px;
@@ -203,13 +129,21 @@
   right: 12px;
   top: 50%;
   transform: translateY(-50%);
-  transform-origin: center center; /* Define o ponto de origem da rotação */
+  transform-origin: center center;
 }
 
-/* Rotação da seta quando o dropdown está aberto */
 .dropdown-control.expanded .dropdown-arrow {
-  transform: translateY(-50%) rotate(180deg); /* Mantém a centralização durante a rotação */
+  transform: translateY(-50%) rotate(180deg);
 }
+
+/* ==============================================
+   4. ESTILO DO DROPDOWN DE GÊNEROS
+============================================== */
+.genre-filter-container {
+  position: relative;
+  z-index: 2;
+}
+
 .genre-checkboxes-dropdown {
   position: absolute;
   top: 100%;
@@ -219,18 +153,17 @@
   border-radius: 8px;
   border: 1px solid rgba(116, 239, 255, 0.3);
   box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
-  max-height: 0; /* Começa fechado */
-  opacity: 0; /* Começa invisível */
+  max-height: 0;
+  opacity: 0;
   overflow: hidden;
   transition: 
     max-height 0.3s ease-in-out, 
-    opacity 0.3s ease-in-out; /* Transição suave */
+    opacity 0.3s ease-in-out;
 }
 
-/* Quando o dropdown está aberto */
 .genre-checkboxes-dropdown.open {
-  max-height: 300px; /* Altura máxima do dropdown */
-  opacity: 1; /* Torna visível */
+  max-height: 300px;
+  opacity: 1;
 }
 
 .dropdown-control.expanded .genre-checkboxes-dropdown {
@@ -238,13 +171,11 @@
   overflow-y: auto;
 }
 
-/* Checkboxes */
 .genre-checkboxes {
   display: flex;
   flex-direction: column;
 }
 
-/* Scrollbar */
 .genre-checkboxes-dropdown::-webkit-scrollbar {
   width: 6px;
 }
@@ -254,63 +185,68 @@
   border-radius: 4px;
 }
 
-/* Container do dropdown */
 .genre-dropdown {
   position: relative;
   padding-left: 0;
-  
 }
 
-.no-results {
-  text-align: center;
-  padding: 40px;
-  min-height: 300px;
+/* Checkboxes Styling */
+.form-check {
+  padding-left: 0;
+  margin-left: 12px;
+}
+
+.form-check-label {
   display: flex;
-  flex-direction: column;
-  justify-content: center;
+  margin-bottom: 0;
+  padding-right: 24px;
   align-items: center;
+  margin-left: -4px;
 }
 
-.no-results i {
-  font-size: 3rem;
+.select-all {
+  margin-left: 8px;
+}
+
+.select-all .form-check-label {
+  position: relative;
+  top: 1px;
+}
+
+.genre-dropdown .form-check-label {
+  color: white;
+  transition: color 0.3s ease;
+  user-select: none;
+}
+
+.genre-dropdown .form-check-input:checked + .form-check-label {
   color: #74efff;
-  margin-bottom: 20px;
 }
 
-.no-results p {
-  font-size: 1.2rem;
-  margin-bottom: 20px;
-}
-
-
-/* Esconde o checkbox padrão */
 .form-check-input {
   opacity: 0;
   position: absolute;
   z-index: -1;
 }
 
-/* Checkbox personalizado */
 .custom-checkbox {
   display: inline-block;
   width: 16px;
   height: 16px;
-  border: 2px solid #74efff; /* Cor da borda */
-  border-radius: 4px; /* Bordas arredondadas */
-  background-color: transparent; /* Fundo transparente */
-  margin-right: 8px; /* Espaçamento entre o checkbox e o texto */
+  border: 2px solid #74efff;
+  border-radius: 4px;
+  background-color: transparent;
+  margin-right: 8px;
   position: relative;
-  flex-shrink: 0; /* Impede que o checkbox diminua de tamanho */
+  flex-shrink: 0;
   transition: background-color 0.3s ease, border-color 0.3s ease;
 }
 
-/* Estilo quando o checkbox está marcado */
 .form-check-input:checked + .form-check-label .custom-checkbox {
-  background-color: #74efff; /* Cor de fundo quando marcado */
-  border-color: #74efff; /* Cor da borda quando marcado */
+  background-color: #74efff;
+  border-color: #74efff;
 }
 
-/* Ícone de check (opcional) */
 .custom-checkbox::after {
   content: '';
   position: absolute;
@@ -318,63 +254,33 @@
   left: 50%;
   width: 8px;
   height: 8px;
-  background-color: white; /* Cor do ícone de check */
-  border-radius: 2px; /* Bordas arredondadas do ícone */
-  transform: translate(-50%, -50%) scale(0); /* Inicialmente escondido */
+  background-color: white;
+  border-radius: 2px;
+  transform: translate(-50%, -50%) scale(0);
   transition: transform 0.3s ease;
 }
 
-/* Mostra o ícone de check quando o checkbox está marcado */
 .form-check-input:checked + .form-check-label .custom-checkbox::after {
-  transform: translate(-50%, -50%) scale(1); /* Mostra o ícone */
+  transform: translate(-50%, -50%) scale(1);
 }
 
-/* Ajuste fino para o texto "Todos os Gêneros" */
-.select-all .form-check-label {
-  position: relative;
-  top: 1px; /* Ajuste fino para centralizar o texto verticalmente */
+.option-genre {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px;
+  margin: 6px 6px;
+  border-radius: 4px;
+  gap: 8px;
+  transition: background-color 0.3s ease;
 }
 
-/* Cor do texto quando o checkbox NÃO está marcado */
-.genre-dropdown .form-check-label {
-  color: white; 
-  transition: color 0.3s ease; 
-  user-select: none;
+.option-genre:hover {
+  background-color: rgba(116, 239, 255, 0.1);
 }
 
-
-/* Cor do texto quando o checkbox ESTÁ marcado */
-.genre-dropdown .form-check-input:checked + .form-check-label {
-  color: #74efff; /* Cor destacada (neon) */
-}
-
-/* Estilos gerais para todos dropdowns */
-.rating-filter-container,
-.sort-filter-container {
-  position: relative;
-  z-index: 1;
-}
-
-.rating-dropdown,
-.sort-dropdown {
-  position: relative;
-}
-
-.dropdown-control {
-  background-color: rgba(22, 33, 62, 0.8);
-  border-radius: 8px;
-  border: 1px solid rgba(116, 239, 255, 0.3);
-  padding: 8px 12px;
-  transition: all 0.3s ease;
-}
-
-.selected-text {
-  flex-grow: 1;
-  color: #74efff;
-}
-.dropdown-control:hover{
-  background-color: rgba(22, 33, 62, 0.4);
-}
+/* ==============================================
+   5. RATING & SORT DROPDOWNS
+============================================== */
 .rating-options-dropdown,
 .sort-options-dropdown {
   position: absolute;
@@ -402,25 +308,13 @@
   display: flex;
   align-items: center;
   padding: 12px 12px;
-  margin: 6px 6px; /* Espaço igual dos dois lados */
-  border-radius: 4px; /* Opcional: arredonda os cantos */
-  gap: 8px;
-  transition: background-color 0.3s ease;
-}
-.option-item:hover {
-  background-color: rgba(116, 239, 255, 0.1);
-}
-.option-genre{
-  display: flex;
-  align-items: center;
-  padding: 12px 12px;
   margin: 6px 6px;
   border-radius: 4px;
   gap: 8px;
   transition: background-color 0.3s ease;
 }
 
-.option-genre:hover{
+.option-item:hover {
   background-color: rgba(116, 239, 255, 0.1);
 }
 
@@ -451,11 +345,11 @@
 }
 
 .label-text {
-  transition: color 0.3s ease; /* Transição de 0.3 segundos com aceleração suave */
+  transition: color 0.3s ease;
 }
 
 .custom-filter {
-  font-size: 0.9rem; /* Ajuste este valor conforme necessário */
+  font-size: 0.9rem;
   user-select: none;
 }
 
@@ -464,22 +358,120 @@
   align-items: center;
 }
 
-::placeholder{
+/* Form Select (For non-custom dropdowns) */
+.form-select {
+  background-color: rgba(22, 33, 62, 0.8);
+  border: 1px solid rgba(116, 239, 255, 0.3);
+  color: white;
+  cursor: pointer;
+}
+
+.form-select:focus {
+  border-color: #74efff;
+  box-shadow: 0 0 10px rgba(116, 239, 255, 0.3);
+}
+
+/* ==============================================
+   6. GAME GRID & CARDS
+============================================== */
+.games-grid {
+  margin-top: 30px;
+}
+
+.game-card {
+  transition: transform 0.3s ease;
+  border: none;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.2);
+  padding: 8px;
+  background-color: rgba(22, 33, 62, 0.8);
+  border-radius: 8px;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.game-card-content {
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.game-card:hover {
+  transform: translateY(-5px) scale(1.02);
   color: #74efff;
-  opacity: 0.2;
+  box-shadow: 0 2px 15px rgba(0, 0, 0, 0.75);
+  cursor: pointer;
 }
 
-
-
-/* Aumenta o z-index quando o dropdown está aberto */
-.genre-filter-container:hover,
-.rating-filter-container:hover,
-.sort-filter-container:hover {
-  z-index: 3;
+img {
+  border-radius: 8px;
 }
 
+h3 {
+  text-align: center;
+}
 
-/* CSS do Loading */
+/* ==============================================
+   7. PAGINAÇÃO & NAVEGAÇÃO
+============================================== */
+.pagination-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 20px;
+  margin-top: 30px;
+  padding-bottom: 30px;
+}
+
+.page-info {
+  color: #74efff;
+  font-size: 0.9rem;
+}
+
+.page-numbers {
+  display: flex;
+  gap: 8px;
+}
+
+.page-numbers button {
+  min-width: 40px;
+}
+
+.page-numbers button.active {
+  background-color: #74efff;
+  color: #0e0e20;
+}
+
+/* ==============================================
+   8. ESTADO DE SEM RESULTADOS
+============================================== */
+.no-results {
+  text-align: center;
+  padding: 40px;
+  min-height: 300px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+}
+
+.no-results i {
+  font-size: 3rem;
+  color: #74efff;
+  margin-bottom: 20px;
+}
+
+.no-results p {
+  font-size: 1.2rem;
+  margin-bottom: 20px;
+}
+
+/* ==============================================
+   9. ANIMAÇÕES DE LOADING
+============================================== */
 .loading-container {
   position: fixed;
   top: 0;
@@ -543,27 +535,55 @@
   animation: dots 1.5s steps(5, end) infinite;
 }
 
+/* ==============================================
+   10. ANIMAÇÕES
+============================================== */
 @keyframes spin {
   100% { transform: rotate(360deg); }
-  }
-  
+}
+
 @keyframes pulse {
   0%, 100% { transform: scale(1); opacity: 0.5; }
   50% { transform: scale(1.2); opacity: 0.2; }
-  }
-  @keyframes pulse-glow {
-    0%, 100% { opacity: 0.3; }
-    50% { opacity: 0.8; }
-  }
+}
+
+@keyframes pulse-glow {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.8; }
+}
+
 @keyframes dots {
   0%, 20% { content: '.'; }
   40% { content: '..'; }
   60% { content: '...'; }
   80%, 100% { content: ''; }
+}
+
+/* ==============================================
+   11. MEDIA QUERIES
+============================================== */
+@media (max-width: 768px) {
+  .explorer-section {
+    padding-top: 60px;
   }
+  
+  .filters-row {
+    grid-template-columns: 1fr;
+  }
+  
+  .filter-group {
+    margin-bottom: 15px;
+  }
+}
+
+
+
+
+/* ==============================================
+   12. CÓDIGOS GUARDADOS PARA POSSÍVEIS IMPLEMENTAÇÕES NO FUTURO
+============================================== */
 
 /*
-
 PROGRESS BAR, CASO EU QUERIA USAR NO FUTURO
 
 .loading-progress {
@@ -601,6 +621,4 @@ PROGRESS BAR, CASO EU QUERIA USAR NO FUTURO
     opacity: 0.8;
   }
 }
-
 */
-

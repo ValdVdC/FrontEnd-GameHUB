@@ -1,4 +1,4 @@
-import { HttpClient } from '@angular/common/http';
+import { HttpClient, HttpParams } from '@angular/common/http';
 import { Injectable } from '@angular/core';
 import { BehaviorSubject, Observable } from 'rxjs';
 import { environment } from '../../environments/environment';
@@ -11,15 +11,25 @@ export class ApiService {
   private apiUrl = environment.API_URL
   
   constructor(private http: HttpClient) {}
-
-  buscarJogos(pagina: number = 1, quantidade: number = 500): Observable<ApiResponse> {
-    return this.http.get<ApiResponse>(this.apiUrl, {
-      params: {
-        page: pagina.toString(),
-        pageSize: quantidade.toString()
-      }
-    });
+  buscarJogos(
+    pagina: number = 1,
+    quantidade: number = 200,
+    generos?: string[]
+  ): Observable<ApiResponse> {
+    
+    // Configurar parâmetros de forma segura
+    let params = new HttpParams()
+      .set('page', pagina.toString())
+      .set('pageSize', quantidade.toString());
+  
+    // Adicionar gêneros se existirem
+    if (generos && generos.length > 0) {
+      params = params.set('genres', generos.join(','));
+    }
+  
+    return this.http.get<ApiResponse>(this.apiUrl, { params });
   }
+  
   buscarCategorias(): Observable<GenreCategory[]> {
     return this.http.get<GenreCategory[]>(`${this.apiUrl}/genres`);
   }

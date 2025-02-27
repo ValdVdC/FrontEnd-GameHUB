@@ -3,6 +3,7 @@ import { debounceTime, Subject, Subscription, takeUntil } from 'rxjs';
 import { ScrollService } from '../../services/scroll.service';
 import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
+import { Game } from '../../models/game.model';
 
 @Component({
   selector: 'app-header',
@@ -24,7 +25,7 @@ export class HeaderComponent implements OnInit, OnDestroy{
   private searchSubject = new Subject<string>();
   private destroy = new Subject<void>();
   busca:string = ''
-  resultadosBusca:any[]=[]
+  resultadosBusca:Game[]=[]
   isSearchFocused:boolean = false
   carregandoResultados:boolean = false;
   semResultados:boolean = false
@@ -51,6 +52,7 @@ export class HeaderComponent implements OnInit, OnDestroy{
                 this.resultadosBusca = results
                 this.carregandoResultados = false;
                 this.semResultados = this.resultadosBusca.length===0
+                console.log(this.resultadosBusca)
               },
               error:()=>{
                 this.resultadosBusca = [];

@@ -12,7 +12,6 @@ export interface Game {
       currentPage: number;
       pageSize: number;
       hasMore: boolean;
-      totalPages?: number;
     };
   }
   
