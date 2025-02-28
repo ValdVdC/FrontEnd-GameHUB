@@ -374,7 +374,6 @@ section {
     #1d0d29 100%
   );
   color: #fff;
-  padding: 40px 0;
 }
 
 .category-content {
@@ -509,7 +508,7 @@ section {
 ============================================== */
 @media (max-width: 768px) {
   .hero-section {
-    height: 90vh;
+    height: 70vh;
   }
   
   .display-4 {
