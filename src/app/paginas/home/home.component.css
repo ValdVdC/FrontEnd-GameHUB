@@ -89,6 +89,35 @@ section {
   margin: 20px auto;
 }
 
+.category-loading {
+  padding: 2rem;
+  margin-bottom: 1.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.category-loading p {
+  color: #74efff;
+  margin-bottom: 1rem;
+  font-size: 1rem;
+}
+
+.category-loading .spinner {
+  margin: 0 auto;
+  width: 40px;
+  height: 40px;
+  border: 4px solid rgba(255, 255, 255, 0.3);
+  border-radius: 50%;
+  border-top-color: #74efff;
+  animation: spin 1s linear infinite;
+}
+
+/* Para garantir espaçamento consistente entre categorias */
+.category-item {
+  margin-bottom: 2rem;
+}
+
 .spinner {
   margin: 20px auto;
   width: 40px;

@@ -1,128 +1,162 @@
-  <section id="home" class="hero-section">
-    <div class="container h-100">
-      <div class="row h-100 align-items-center">
-        <div class="col-lg-6">
-          <h1 class="display-4 neon-text">Seu Hub de Games</h1>
-          <p class="lead mb-4">Explore, jogue e conecte-se com a maior comunidade gamer do Brasil</p>
-          <div class="d-flex gap-3">
-            <button class="btn btn-neon btn-lg" routerLink="explorador">Explorar Jogos</button>
-            <button class="btn btn-outline-neon btn-lg">Comunidade</button>
-          </div>
+<!-- ==============================================
+     1. SEÇÃO HERO - APRESENTAÇÃO PRINCIPAL
+============================================== -->
+<section id="home" class="hero-section">
+  <div class="container h-100">
+    <div class="row h-100 align-items-center">
+      <div class="col-lg-6">
+        <h1 class="display-4 neon-text">Seu Hub de Games</h1>
+        <p class="lead mb-4">Explore, jogue e conecte-se com a maior comunidade gamer do Brasil</p>
+        <div class="d-flex gap-3">
+          <button class="btn btn-neon btn-lg" routerLink="explorador">Explorar Jogos</button>
+          <button class="btn btn-outline-neon btn-lg">Comunidade</button>
         </div>
       </div>
     </div>
-    <div class="hero-overlay"></div>
-  </section>
-  <!-- Jogos -->
-  <section id="games" class="games-section py-5">
-    <div class="container">
-      <div class="section-title-container">
-        <h2 class="section-title">Jogos do momento</h2>
-      </div>
-      <div class="row">
-        <div class="loading-container" *ngIf="jogosMomentoCarregando">
-          <p>Carregando Jogos...</p>
-          <div class="spinner"></div>
-        </div>
-        <div class="col-md-4 mb-4" *ngFor="let game of jogos.slice(0, 9)">
-          <div class="game-card" (click)="detalhesJogo(game.id)">
-          <div class="game-card-image">
-              <img [src]="game.cover_url || 'assets/default-cover.jpg'" [alt]="game.name" class="img-fluid">
-            </div>
-            <div class="game-card-content">
-              <!-- Título do jogo -->
-              <div class="game-title-container">
-                <h3 class="game-title">{{game.name}}</h3>
-              </div>
-              
-              <!-- Linha divisória -->
-              <div class="divider"></div>
-              
-              <!-- Área para gêneros e avaliação -->
-              <div class="game-details">
-                <div class="genre-container">
-                  <span *ngFor="let genre of game.genres" class="genre-badge">
-                    {{genre}}
-                  </span>
-                </div>
-                <div class="rating" *ngIf="game.total_rating">
-                  <i class="bi bi-star-fill"></i>
-                  {{game.total_rating | formatarNota}}
-                </div>
-              </div>
-            </div> 
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
+  </div>
+  <div class="hero-overlay"></div>
+</section>
 
-  <!-- Categories Grid -->
-  <section id="categories" class="categories-section py-5">
-    <div class="container">
-      <div class="section-title-container">
-        <h2 class="section-title">Jogos por Categoria</h2>
-      </div>
-      <div class="loading-container" *ngIf="categoriasCarregando">
-        <p>Carregando Categorias...</p>
+<!-- ==============================================
+     2. SEÇÃO DE JOGOS DO MOMENTO
+============================================== -->
+<section id="games" class="games-section py-5">
+  <div class="container">
+    <div class="section-title-container">
+      <h2 class="section-title">Jogos do momento</h2>
+    </div>
+    <div class="row">
+      <!-- Estado de carregamento -->
+      <div class="loading-container" *ngIf="jogosMomentoCarregando">
+        <p>Carregando Jogos...</p>
         <div class="spinner"></div>
       </div>
       
-      <div class="categories-container" *ngIf="categorias.length > 0">
-        <div class="category-item" *ngFor="let category of categorias">
-          <div class="category-content">
-            <div class="carousel-navigation">
-              <div class="category-genre">
-                <i class="bi bi-controller"></i>
-                {{category.value.genre}}
-              </div>
+      <!-- Exibição dos jogos -->
+      <div class="col-md-4 mb-4" *ngFor="let game of jogos.slice(0, 9)">
+        <div class="game-card" (click)="detalhesJogo(game.id)">
+          <div class="game-card-image">
+            <img [src]="game.cover_url || 'assets/default-cover.jpg'" [alt]="game.name" class="img-fluid">
+          </div>
+          <div class="game-card-content">
+            <!-- Título do jogo -->
+            <div class="game-title-container">
+              <h3 class="game-title">{{game.name}}</h3>
             </div>
             
-            <div class="games-container">
-              <div class="game-card-categories" (click)="detalhesJogo(game.id)" *ngFor="let game of category.value.games.slice(0,10)">
-                <div class="img-container">
-                  <img [src]="game.cover_url" alt="{{game.name}} Cover">
+            <!-- Linha divisória -->
+            <div class="divider"></div>
+            
+            <!-- Área para gêneros e avaliação -->
+            <div class="game-details">
+              <div class="genre-container">
+                <span *ngFor="let genre of game.genres" class="genre-badge">
+                  {{genre}}
+                </span>
+              </div>
+              <div class="rating" *ngIf="game.total_rating">
+                <i class="bi bi-star-fill"></i>
+                {{game.total_rating | formatarNota}}
+              </div>
+            </div>
+          </div> 
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================
+     3. SEÇÃO DE CATEGORIAS DE JOGOS
+============================================== -->
+<section id="categories" class="categories-section py-5">
+  <div class="container">
+    <div class="section-title-container">
+      <h2 class="section-title">Jogos por Categoria</h2>
+    </div>
+    
+    <!-- Estado de carregamento global de categorias -->
+    <div class="loading-container" *ngIf="categoriasCarregando">
+      <p>Carregando Categorias...</p>
+      <div class="spinner"></div>
+    </div>
+    
+    <!-- Container principal de categorias -->
+    <div class="categories-container" *ngIf="categorias.length > 0">
+      <!-- Loop por cada categoria -->
+      <div class="category-item" *ngFor="let category of categorias">
+        <!-- Estado de carregamento individual por categoria -->
+        <div class="loading-container category-loading" *ngIf="!categoriaPronta(category.value.genre)">
+          <p>Carregando {{category.value.genre}}...</p>
+          <div class="spinner"></div>
+        </div>
+        
+        <!-- Conteúdo da categoria -->
+        <div class="category-content" *ngIf="categoriaPronta(category.value.genre)">
+          <!-- Cabeçalho da categoria -->
+          <div class="carousel-navigation">
+            <div class="category-genre">
+              <i class="bi bi-controller"></i>
+              {{category.value.genre}}
+            </div>
+          </div>
+          
+          <!-- Lista de jogos da categoria -->
+          <div class="games-container">
+            <div class="game-card-categories" 
+                 (click)="detalhesJogo(game.id)" 
+                 *ngFor="let game of category.value.games.slice(0,10)">
+              <!-- Imagem do jogo -->
+              <div class="img-container">
+                <img [src]="game.cover_url" alt="{{game.name}} Cover">
+              </div>
+              
+              <!-- Título do jogo -->
+              <div class="title-container">
+                <div class="game-details">
+                  <h5>{{game.name}}</h5>
                 </div>
-                <div class="title-container">
-                  <div class="game-details">
-                    <h5>{{game.name}}</h5>
-                  </div>
-                </div>
-                <div class="rating">
-                  <i class="bi bi-star-fill"></i>
-                  {{game.total_rating|formatarNota}}
-                </div>
+              </div>
+              
+              <!-- Avaliação do jogo -->
+              <div class="rating">
+                <i class="bi bi-star-fill"></i>
+                {{game.total_rating|formatarNota}}
               </div>
             </div>
           </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Community Section -->
-  <section id="community" class="community-section py-5">
-    <div class="container">
-      <div class="section-title-container">
-        <h2 class="section-title mb-4">Comunidade</h2>
+<!-- ==============================================
+     4. SEÇÃO DE COMUNIDADE
+============================================== -->
+<section id="community" class="community-section py-5">
+  <div class="container">
+    <div class="section-title-container">
+      <h2 class="section-title mb-4">Comunidade</h2>
+    </div>
+    
+    <!-- Estatísticas da comunidade -->
+    <div class="community-stats">
+      <div class="stat-item">
+        <i class="bi bi-people-fill"></i>
+        <h3>1M+</h3>
+        <p>Jogadores</p>
       </div>
-      <div class="community-stats">
-        <div class="stat-item">
-          <i class="bi bi-people-fill"></i>
-          <h3>1M+</h3>
-          <p>Jogadores</p>
-        </div>
-        <div class="stat-item">
-          <i class="bi bi-controller"></i>
-          <h3>10K+</h3>
-          <p>Jogos</p>
-        </div>
-        <div class="stat-item">
-          <i class="bi bi-chat-fill"></i>
-          <h3>500K+</h3>
-          <p>Discussões</p>
-        </div>
+      <div class="stat-item">
+        <i class="bi bi-controller"></i>
+        <h3>10K+</h3>
+        <p>Jogos</p>
+      </div>
+      <div class="stat-item">
+        <i class="bi bi-chat-fill"></i>
+        <h3>500K+</h3>
+        <p>Discussões</p>
       </div>
     </div>
-  </section>
-  
+  </div>
+</section>

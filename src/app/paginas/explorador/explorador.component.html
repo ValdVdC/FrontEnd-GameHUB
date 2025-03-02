@@ -231,8 +231,8 @@
              7. MENSAGENS DE ESTADO VAZIO 
              ============================================== -->
         <div class="no-results" *ngIf="genresLoaded && !loading && 
-            ((isSearchMode && filteredSearchResults.length === 0) || 
-            (!isSearchMode && filteredGames.length === 0))">
+        ((isSearchMode && filteredSearchResults.length === 0) || 
+        (!isSearchMode && filteredGames.length === 0))">
           <i class="bi bi-emoji-frown" *ngIf="hasSelectedGenres"></i>
           <i class="bi bi-filter-circle" *ngIf="!hasSelectedGenres"></i>
           

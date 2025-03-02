@@ -13,7 +13,7 @@ export class ApiService {
   constructor(private http: HttpClient) {}
   buscarJogos(
     pagina: number = 1,
-    quantidade: number = 200,
+    quantidade: number = 500,
     generos?: string[]
   ): Observable<ApiResponse> {
     
@@ -29,7 +29,6 @@ export class ApiService {
   
     return this.http.get<ApiResponse>(this.apiUrl, { params });
   }
-  
   buscarCategorias(): Observable<GenreCategory[]> {
     return this.http.get<GenreCategory[]>(`${this.apiUrl}/genres`);
   }

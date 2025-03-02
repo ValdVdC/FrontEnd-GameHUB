@@ -1,8 +1,9 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { debounceTime, Subject, Subscription, takeUntil } from 'rxjs';
+import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
+import { filter } from 'rxjs/operators';
 import { ScrollService } from '../../services/scroll.service';
 import { ApiService } from '../../services/api.service';
-import { Router } from '@angular/router';
 import { Game } from '../../models/game.model';
 
 @Component({
@@ -10,7 +11,32 @@ import { Game } from '../../models/game.model';
   templateUrl: './header.component.html',
   styleUrl: './header.component.css'
 })
-export class HeaderComponent implements OnInit, OnDestroy{
+export class HeaderComponent implements OnInit, OnDestroy {
+  // ==============================================
+  // 1. PROPRIEDADES DE ESTADO DA NAVEGAÇÃO
+  // ==============================================
+  activeLink: string = 'home';
+  
+  // ==============================================
+  // 2. PROPRIEDADES DO SISTEMA DE BUSCA
+  // ==============================================
+  busca: string = '';
+  resultadosBusca: Game[] = [];
+  isSearchFocused: boolean = false;
+  carregandoResultados: boolean = false;
+  semResultados: boolean = false;
+  clickTimeout: any;
+  
+  // ==============================================
+  // 3. GERENCIAMENTO DE SUBSCRIPTIONS E RXJS
+  // ==============================================
+  private subscription!: Subscription;
+  private searchSubject = new Subject<string>();
+  private destroy = new Subject<void>();
+  
+  // ==============================================
+  // 4. DETECÇÃO DE SCROLL
+  // ==============================================
   @HostListener('window:scroll', ['$event'])
   onWindowScroll() {
     const navbar = document.querySelector('.navbar');
@@ -20,85 +46,128 @@ export class HeaderComponent implements OnInit, OnDestroy{
       navbar?.classList.remove('scrolled');
     }
   }
-  activeLink: string = 'home';
-  private subscription!: Subscription;
-  private searchSubject = new Subject<string>();
-  private destroy = new Subject<void>();
-  busca:string = ''
-  resultadosBusca:Game[]=[]
-  isSearchFocused:boolean = false
-  carregandoResultados:boolean = false;
-  semResultados:boolean = false
-  clickTimeout:any; 
   
-  constructor(private scrollService: ScrollService, private apiService:ApiService, private router:Router) {}
+  // ==============================================
+  // 5. CONSTRUTOR E INJEÇÃO DE DEPENDÊNCIAS
+  // ==============================================
+  constructor(
+    private scrollService: ScrollService, 
+    private apiService: ApiService, 
+    private router: Router
+  ) {}
 
+  // ==============================================
+  // 6. MÉTODOS DE CICLO DE VIDA
+  // ==============================================
   ngOnInit() {
-    this.subscription = this.scrollService.activeSectionId
-      .subscribe(sectionId => {
-        this.activeLink = sectionId;
-      });
-
-      this.searchSubject
-        .pipe(
-          debounceTime(300),
-          takeUntil(this.destroy)
-        )
-        .subscribe(async(busca)=>{
-          if(busca.length>=3){
-            this.semResultados = false;
-            await this.apiService.buscarJogoPorNome(busca).subscribe({
-              next:(results)=>{
-                this.resultadosBusca = results
-                this.carregandoResultados = false;
-                this.semResultados = this.resultadosBusca.length===0
-                console.log(this.resultadosBusca)
-              },
-              error:()=>{
-                this.resultadosBusca = [];
-                this.carregandoResultados = false;
-                this.semResultados = true;
-              }
-            });
-          }else{
-            this.resultadosBusca = [];
-            this.semResultados = false;
-          }
-        })
+    // Inicialização do monitoramento da seção ativa
+    this.inicializarMonitoramentoDeSecao();
+    
+    // Inicialização do monitoramento de navegação
+    this.inicializarMonitoramentoDeRota();
+    
+    // Inicialização do sistema de busca
+    this.inicializarSistemaDeBusca();
   }
 
   ngOnDestroy() {
-    this.destroy.next()
-    this.destroy.complete()
+    // Limpeza das subscrições para evitar memory leaks
+    this.destroy.next();
+    this.destroy.complete();
     if (this.subscription) {
       this.subscription.unsubscribe();
     }
   }
 
-  onSearch(){
-    this.carregandoResultados = true;
-    this.searchSubject.next(this.busca)
+  // ==============================================
+  // 7. MÉTODOS DE INICIALIZAÇÃO
+  // ==============================================
+  private inicializarMonitoramentoDeSecao() {
+    this.subscription = this.scrollService.activeSectionId
+      .subscribe(sectionId => {
+        this.activeLink = sectionId;
+      });
   }
-  onFocusSearch(){
-    this.isSearchFocused = true
+  
+  private inicializarMonitoramentoDeRota() {
+    this.router.events.pipe(
+      filter(event => event instanceof NavigationEnd),
+      takeUntil(this.destroy)
+    ).subscribe((event: any) => {
+      // Se não estivermos na página home, desative todos os links
+      if (!event.url.includes('#') && event.url !== '/' && event.url !== '/home') {
+        this.activeLink = '';
+      } else if (event.url === '/' || event.url === '/home') {
+        // Se voltarmos para a página inicial sem um hash, definimos o home como ativo
+        this.activeLink = 'home';
+      }
+    });
   }
-  onBlurSearch(){
-    this.clickTimeout = setTimeout(() => {
-      this.isSearchFocused = false
-    }, 100);
+  
+  private inicializarSistemaDeBusca() {
+    this.searchSubject
+      .pipe(
+        debounceTime(300),
+        takeUntil(this.destroy)
+      )
+      .subscribe(async(busca) => {
+        if (busca.length >= 3) {
+          this.semResultados = false;
+          this.carregandoResultados = true;
+          
+          await this.apiService.buscarJogoPorNome(busca).subscribe({
+            next: (results) => {
+              this.resultadosBusca = results;
+              this.carregandoResultados = false;
+              this.semResultados = this.resultadosBusca.length === 0;
+            },
+            error: () => {
+              this.resultadosBusca = [];
+              this.carregandoResultados = false;
+              this.semResultados = true;
+            }
+          });
+        } else {
+          this.resultadosBusca = [];
+          this.semResultados = false;
+          this.carregandoResultados = false;
+        }
+      });
   }
-  onResultsMouseDown(){
-    if(this.clickTimeout){
-      clearTimeout(this.clickTimeout)
-    }
-  }
+
+  // ==============================================
+  // 8. MÉTODOS DO SISTEMA DE NAVEGAÇÃO
+  // ==============================================
   setActiveLink(link: string) {
     this.activeLink = link;
   }
-  buscarJogo(gameId:number){
-    console.log('Cliquei')
-    this.activeLink = '';
-    this.router.navigate(['/detalhes',gameId])
+  
+  buscarJogo(gameId: number) {
+    this.activeLink = ''; // Remove o destaque ao navegar para outra página
+    this.router.navigate(['/detalhes', gameId]);
+  }
+  
+  // ==============================================
+  // 9. MÉTODOS DO SISTEMA DE BUSCA
+  // ==============================================
+  onSearch() {
+    this.carregandoResultados = true;
+    this.searchSubject.next(this.busca);
+  }
+  
+  onFocusSearch() {
+    this.isSearchFocused = true;
+  }
+  
+  onBlurSearch() {
+    this.clickTimeout = setTimeout(() => {
+      this.isSearchFocused = false;
+    }, 100);
+  }
+  
+  onResultsMouseDown() {
+    if (this.clickTimeout) {
+      clearTimeout(this.clickTimeout);
+    }
   }
 }
-

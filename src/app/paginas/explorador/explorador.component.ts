@@ -20,7 +20,12 @@ export class ExploradorComponent {
   genres: string[] = [];
   genresLoaded = false;
   loading: boolean = false;
-  
+  private setLoading(state: boolean) {
+    this.loading = state;
+    if (!state) {
+      this.preLoading = false;
+    }
+  }
   // Estado da interface
   isMobile: boolean = false;
   activeDropdown: string | null = null;
@@ -90,23 +95,27 @@ export class ExploradorComponent {
   }
   
   ngOnInit() {
-    this.loading = true;
+    // Ativar loading e preLoading imediatamente
+    this.setLoading(true);
+    this.preLoading = true;
     
     // Recuperar dados do localStorage
     const estadoRecuperado = this.recuperarEstadoDoLocal();
     
-    // Carregar jogos e gêneros
-    if (!estadoRecuperado || this.games.length === 0) {
-      this.loadInitialGames();
-    } else {
-      // Se temos estado recuperado, mas precisamos atualizar a paginação
-      this.updateVisiblePages();
-      this.loading = false;
-    }
-    
-    if (!this.genresLoaded) {
-      this.loadGenres();
-    }
+    // Carregar gêneros primeiro
+    this.loadGenres().then(() => {
+      // Depois carregar jogos (se necessário)
+      if (!estadoRecuperado || this.games.length === 0) {
+        this.loadInitialGames();
+      } else {
+        // Se temos estado recuperado, atualizar a paginação
+        this.updateVisiblePages();
+        this.setLoading(false);
+      }
+    }).catch(error => {
+      console.error('Erro ao carregar gêneros:', error);
+      this.setLoading(false);
+    });
     
     this.detectMobile();
     window.addEventListener('resize', () => this.detectMobile());
@@ -114,14 +123,21 @@ export class ExploradorComponent {
     // Salvar estado periodicamente
     this.intervalSalvarEstado = setInterval(() => this.salvarEstadoNoLocal(), 5000);
   }
-  
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
     clearInterval(this.intervalSalvarEstado);
     this.salvarEstadoNoLocal();
   }
-
+  private resetLoadingAfterTimeout(timeoutMs: number = 10000) {
+    setTimeout(() => {
+      if (this.loading) {
+        console.warn('Loading foi resetado por timeout de segurança');
+        this.setLoading(false);
+      }
+    }, timeoutMs);
+  }
+  
   /* ==============================================
      6. GESTÃO DE ESTADO (SESSIONSTORAGE)
   ============================================== */
@@ -135,10 +151,10 @@ export class ExploradorComponent {
       selectedGenres: this.selectedGenres,
       selectedRating: this.selectedRating,
       sortBy: this.sortBy,
-      // Adicionar estado de busca
       searchTerm: this.searchTerm,
       searchResults: this.searchResults,
-      isSearchMode: this.isSearchMode
+      isSearchMode: this.isSearchMode,
+      expiraEm: Date.now() + (30 * 60 * 1000)
     };
     
     try {
@@ -147,14 +163,17 @@ export class ExploradorComponent {
       console.warn('Não foi possível salvar o estado no localStorage', e);
     }
   }
-  
+
   private recuperarEstadoDoLocal() {
     try {
       const estadoSalvo = localStorage.getItem('exploradorEstado');
       
       if (estadoSalvo) {
         const estado = JSON.parse(estadoSalvo);
-        
+        if (estado.expiraEm && estado.expiraEm < Date.now()) {
+          localStorage.removeItem('exploradorEstado');
+          return false;
+        }
         this.games = estado.games || [];
         this.apiPage = estado.apiPage || 1;
         this.temMaisJogos = estado.temMaisJogos !== undefined ? estado.temMaisJogos : true;
@@ -195,18 +214,29 @@ export class ExploradorComponent {
       const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
       this.games = response.games;
       this.temMaisJogos = response.pagination.hasMore;
-      this.applyFilters(true);
+      
+      // Garantir que a ordenação seja aplicada corretamente
+      if (this.sortBy === 'relevance') {
+        this.filteredGames = [...this.games];
+      } else {
+        this.applyFilters(true);
+      }
     } catch (error) {
       console.error('Erro ao carregar jogos:', error);
+      // Garantir que temos algo para mostrar, mesmo que vazio
+      this.filteredGames = [];
     } finally {
-      this.loading = false;
+      this.setLoading(false);
+      // Ativar o timer de segurança para casos futuros
+      this.resetLoadingAfterTimeout();
     }
   }
 
   async carregarMaisJogos() {
     if (this.carregandoMais) return;
-    
+  
     this.carregandoMais = true;
+    this.setLoading(true);
     
     try {
       const resultado = await this.carregarJogosComRetry(3, 1500);
@@ -232,7 +262,13 @@ export class ExploradorComponent {
       const newGames = response.games.filter(game => !existingIds.has(game.id));
       
       if (newGames.length > 0) {
-        this.games = [...this.games, ...newGames];
+        // Adicionar os novos jogos preservando a ordem da API
+        if (this.sortBy === 'relevance') {
+          this.games = [...this.games, ...newGames];
+        } else {
+          // Para outros tipos de ordenação, podemos adicionar e ordenar depois
+          this.games = [...this.games, ...newGames];
+        }
         this.apiPage++;
         this.temMaisJogos = response.pagination.hasMore || newGames.length >= 10;
         await this.applyFilters(false);
@@ -253,6 +289,7 @@ export class ExploradorComponent {
       this.temMaisJogos = true;
     } finally {
       this.carregandoMais = false;
+      this.setLoading(false);
     }
   }
 
@@ -276,18 +313,29 @@ export class ExploradorComponent {
   private async loadGenres() {
     try {
       const response = await lastValueFrom(this.apiService.buscarCategorias());
+      
+      // Extrair os gêneros da resposta
       this.genres = response.map(c => c.value.genre);
       
-      // Inicializa gêneros apenas se não tiver estado anterior
-      if (Object.keys(this.selectedGenres).length === 0) {
-        this.selectedGenres = this.genres.reduce((acc, genre) => 
-          ({...acc, [genre]: true}), {});
-      } else {
-        // Garantir que novos gêneros adicionados sejam incluídos
+      // Criar uma cópia do estado atual
+      const oldSelectedGenres = {...this.selectedGenres};
+      
+      // Reinicializar selectedGenres
+      this.selectedGenres = {};
+      
+      // Para cada gênero disponível, manter seleção anterior ou definir como true (padrão)
+      this.genres.forEach(genre => {
+        // Se não houver estado anterior ou não encontramos o gênero no estado antigo, 
+        // selecione-o por padrão (true)
+        this.selectedGenres[genre] = oldSelectedGenres[genre] !== undefined ? 
+          oldSelectedGenres[genre] : true;
+      });
+      
+      // Se todos os gêneros estiverem desmarcados, marque todos como true
+      const temAlgumSelecionado = Object.values(this.selectedGenres).some(value => value === true);
+      if (!temAlgumSelecionado) {
         this.genres.forEach(genre => {
-          if (this.selectedGenres[genre] === undefined) {
-            this.selectedGenres[genre] = true;
-          }
+          this.selectedGenres[genre] = true;
         });
       }
       
@@ -298,7 +346,7 @@ export class ExploradorComponent {
         this.applyFilters(false);
       }
     } catch (error) {
-      console.error('Erro ao carregar categorias:', error);
+      this.genresLoaded = true;
     }
   }
 
@@ -416,11 +464,6 @@ export class ExploradorComponent {
     try {
       if (resetPage) {
         this.currentPage = 1;
-        if (this.games.length > 0) {
-          this.games = [];
-          this.apiPage = 1;
-          this.temMaisJogos = true;
-        }
       }
   
       if (!this.hasSelectedGenres) {
@@ -429,11 +472,17 @@ export class ExploradorComponent {
         return;
       }
   
+      // Indicador de carregamento ao iniciar filtros
+      this.loading = true;
+  
       // Filtrar os jogos atuais
       let filtered = this.filterByGenres([...this.games]);
       filtered = this.filterByRating(filtered);
-      filtered = this.sortGames(filtered);
       
+      if (this.sortBy !== 'relevance') {
+        filtered = this.sortGames(filtered);
+      }
+  
       // Determinar se precisamos de mais jogos
       const jogosNecessarios = this.itemsPerPage * this.currentPage;
       const precisaMaisJogos = filtered.length < jogosNecessarios && this.temMaisJogos;
@@ -445,6 +494,8 @@ export class ExploradorComponent {
       while (precisaMaisJogos && tentativas < MAX_TENTATIVAS) {
         const jogosAntes = filtered.length;
         
+        // Deixe o loading ativo durante carregamento
+        this.loading = true;
         await this.carregarMaisJogos();
         
         filtered = this.filterByGenres([...this.games]);
@@ -467,6 +518,9 @@ export class ExploradorComponent {
       this.updateVisiblePages();
     } catch (error) {
       console.error('Erro ao aplicar filtros:', error);
+    } finally {
+      // Só define loading como false quando todo o processo terminar
+      this.loading = false;
     }
   }
 
@@ -501,10 +555,22 @@ export class ExploradorComponent {
       return [];
     }
   
-    return games.filter(game => 
-      Array.isArray(game.genres) && 
-      selectedGenresList.some(genre => game.genres.includes(genre))
-    );
+    return games.filter(game => {
+      // Verifica se game.genres é um array de strings ou um array de objetos com propriedade name
+      if (!Array.isArray(game.genres)) {
+        return false;
+      }
+      
+      // Se for array de objetos com name
+      if (typeof game.genres[0] === 'object' && game.genres[0] !== null) {
+        return selectedGenresList.some(genre => 
+          game.genres.some((g: any) => g.name === genre)
+        );
+      }
+      
+      // Se for array de strings
+      return selectedGenresList.some(genre => game.genres.includes(genre));
+    });
   }
 
   private filterByRating(games: any[]): any[] {
@@ -514,6 +580,11 @@ export class ExploradorComponent {
   }
   
   private sortGames(games: any[]): any[] {
+    if (this.sortBy === 'relevance') {
+      // Se for relevância, preservar a ordem original da API
+      return [...games]; // Retorna uma cópia para evitar efeitos colaterais
+    }
+    
     return games.sort((a, b) => {
       switch (this.sortBy) {
         case 'rating': return (b.total_rating || 0) - (a.total_rating || 0);
@@ -527,7 +598,8 @@ export class ExploradorComponent {
      10. GESTÃO DE GÊNEROS
   ============================================== */
   get hasSelectedGenres(): boolean {
-    return Object.values(this.selectedGenres).some(value => value);
+    // Verifica apenas gêneros que existem na lista atual
+    return this.genres.some(genre => this.selectedGenres[genre] === true);
   }
 
   get allGenresSelected(): boolean {
@@ -538,14 +610,25 @@ export class ExploradorComponent {
     this.selectedGenres[genre] = !this.selectedGenres[genre];
     this.updateAllSelected();
     
+    const haveraSelecionados = Object.values(this.selectedGenres).some(selected => selected);
+  
+    // Se não haverá nenhum gênero selecionado
+    if (!haveraSelecionados) {
+      this.filteredGames = [];
+      this.showNoGenresMessage = true;
+      this.salvarEstadoNoLocal();
+      return; // Sai da função sem iniciar o carregamento
+    }
+
+    this.loading = true;
+
     setTimeout(async () => {
       try {
-        this.loading = true;
         await this.applyFilters(true);
         this.filteredGames = [...this.filteredGames];
         this.salvarEstadoNoLocal();
       } finally {
-        this.loading = false;
+        // loading será desativado no finally do applyFilters
       }
     }, 100);
   }
@@ -553,6 +636,9 @@ export class ExploradorComponent {
   toggleAllGenres() {
     const newState = !this.allGenresSelected;
     this.genres.forEach(genre => this.selectedGenres[genre] = newState);
+
+    console.log('Estado dos gêneros após toggleAllGenres:', this.selectedGenres, 'hasSelectedGenres:', this.hasSelectedGenres);
+    
     this.applyFilters(true); 
     this.salvarEstadoNoLocal();
   }
@@ -654,31 +740,13 @@ export class ExploradorComponent {
       
       this.updateVisiblePages();
       
-      if (this.totalPages > this.currentPage) {
-        this.precarregarProximaPagina();
-      } else if (!this.temMaisJogos) {
-        setTimeout(() => this.verificarSeRealmenteAcabou(), 500);
-      }
       this.salvarEstadoNoLocal();
     } finally {
       this.loading = false;
     }
   }
 
-  private precarregarProximaPagina() {
-    if (!this.temMaisJogos || this.preLoading) return;
-    
-    const jogosNecessariosProximaPagina = (this.currentPage + 1) * this.itemsPerPage;
-    
-    if (this.filteredGames.length < jogosNecessariosProximaPagina) {
-      setTimeout(() => {
-        this.preLoading = true;
-        this.carregarMaisJogos().finally(() => {
-          this.preLoading = false;
-        });
-      }, 500);
-    }
-  }
+
 
   /* ==============================================
      12. UI E INTERAÇÕES
