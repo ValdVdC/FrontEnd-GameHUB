@@ -34,13 +34,12 @@
               (click)="isMobile && toggleDropdown('genre')">
                 <!-- Controle do Dropdown de Gêneros -->
                 <div class="dropdown-control" [class.expanded]="activeDropdown === 'genre'">
-                  <div class="form-check select-all">
+                  <div class="form-check select-all" (click)="$event.stopPropagation()">
                     <input 
                       type="checkbox" 
                       id="select-all-genres"
                       [checked]="allGenresSelected"
                       (change)="toggleAllGenres()"
-                      (click)="$event.stopPropagation()" 
                       class="form-check-input"> 
                     <label for="select-all-genres" class="form-check-label">
                       <span class="custom-checkbox"></span>
@@ -61,13 +60,12 @@
                     <div class="genre-checkboxes">
                       <div *ngFor="let genre of genres" 
                           class="form-check option-genre"
-                          (click)="$event.stopPropagation()">
+                          (click)="toggleGenre(genre);$event.stopPropagation()">
                         <input 
                           type="checkbox" 
                           [id]="'genre-' + genre" 
                           [value]="genre" 
                           [checked]="selectedGenres[genre]"
-                          (change)="toggleGenre(genre)"
                           class="form-check-input">
                         <label [for]="'genre-' + genre" class="form-check-label">
                           <span class="custom-checkbox"></span>
