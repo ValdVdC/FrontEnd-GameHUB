@@ -62,6 +62,14 @@ export class ExploradorComponent {
 
   onFilterModeChange() {
     console.log('Modo de filtro alterado para:', this.genreFilterMode);
+    if (this.genreFilterMode === 'exclusive') {
+      Object.keys(this.selectedGenres).forEach(genre => {
+        this.selectedGenres[genre] = false;
+      });
+    }else{
+      Object.keys(this.selectedGenres).forEach(genre => {
+      this.selectedGenres[genre] = true;
+    });}
     this.applyFilters(true);
     this.salvarEstadoNoLocal();
   }
