@@ -113,6 +113,8 @@
 }
 
 .selected-text {
+  display: flex;
+  align-items: center;
   flex-grow: 1;
   color: #74efff;
 }
@@ -209,6 +211,7 @@
 .genre-checkboxes {
   display: flex;
   flex-direction: column;
+  
 }
 
 .genre-checkboxes-dropdown::-webkit-scrollbar {
@@ -280,7 +283,7 @@
   cursor: pointer;
   transition: all 0.3s ease;
   color: #74efff;
-  opacity: 0.7;
+  opacity: 1;
 }
 
 .mode-option input:checked + label {
@@ -292,7 +295,7 @@
 /* Tooltip à direita */
 .mode-tooltip {
   position: absolute;
-  left: calc(100% + 8px);
+  left: calc(100%);
   top: 50%;
   transform: translateY(-50%);
   background: rgba(22, 33, 62, 0.95);
@@ -392,6 +395,27 @@
   border-radius: 4px;
   gap: 8px;
   transition: background-color 0.3s ease;
+}
+.filter-mode-indicator {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.7rem;
+  padding: 2px 6px;
+  margin-left: 8px;
+  border-radius: 10px;
+  background-color: rgba(116, 239, 255, 0.1);
+  color: rgba(116, 239, 255, 0.7);
+  transition: all 0.3s ease;
+}
+
+.filter-mode-indicator.inclusive {
+  background-color: rgba(116, 239, 255, 0.1);
+}
+
+.filter-mode-indicator.exclusive {
+  background-color: rgba(255, 116, 239, 0.1);
+  color: rgba(255, 116, 239, 0.7);
 }
 
 .option-genre:hover {
@@ -525,11 +549,18 @@
   box-shadow: 0 2px 15px rgba(0, 0, 0, 0.75);
   cursor: pointer;
 }
-
-img {
-  border-radius: 8px;
+.game-card-image img {
+  transform: scale(0.95);
+  width: 100%;
+  aspect-ratio: 3/4;
+  object-fit: cover;
+  border-radius: 6px;
+  transition: transform 0.3s ease;
 }
-
+.game-card:hover img{
+transform: scale(1.02);
+transition: all 0.3 ease;
+}
 h3 {
   text-align: center;
 }
@@ -680,7 +711,7 @@ h3 {
 }
 
 /* ==============================================
-   11. MEDIA QUERIES
+   11. MEDIA QUERIES / RESPONSIVIDADE
 ============================================== */
 @media (max-width: 768px) {
   .explorer-section {
@@ -694,6 +725,56 @@ h3 {
   .filter-group {
     margin-bottom: 15px;
   }
+  
+.genre-checkboxes-dropdown.closed {
+  max-height: 0 !important;
+  opacity: 0 !important;
+  visibility: hidden !important;
+  overflow: hidden !important;
+  pointer-events: none !important; 
+  transition: all 0.3s ease-out;
+}
+.filter-mode-sidebar.closed {
+  opacity: 0 !important;
+  visibility: hidden !important;
+  transition: all 0.3s ease-out;
+}
+.filter-mode-sidebar {
+  position: absolute; /* Remove o posicionamento absoluto */
+  left: 0;
+  right: 0;
+  width: 50%; /* Define uma largura menor */
+  margin: 10px auto; /* Centraliza a sidebar */
+  border-radius: 8px; /* Arredonda os cantos */
+  border: 1px solid rgba(116, 239, 255, 0.7); /* Mantém a borda */
+  border-top: none;
+  flex-direction: row; /* Organiza os elementos na horizontal */
+  justify-content: center; /* Centraliza os elementos */
+  padding: 10px; /* Adiciona um pouco de padding */
+  margin-top: 284px; /* Adiciona margem superior para separar do dropdown */
+  opacity: 1; /* Garante que a sidebar seja visível */
+  pointer-events: auto; /* Permite interação */
+  z-index: 1; /* Define um z-index adequado */
+}
+
+/* Aumenta um pouco o tamanho da área de toque para mobile */
+.mode-option label {
+  width: 38px;
+  height: 38px;
+}
+
+/* Ajusta o tooltip para aparecer abaixo em vez de ao lado */
+.mode-tooltip {
+  left: 50%;
+  top: 100%;
+  transform: translateX(-50%);
+  margin-top: 5px;
+}
+
+/* Garante que o dropdown de checkboxes tem margem inferior suficiente */
+.genre-checkboxes-dropdown.open {
+  padding-bottom: 60px; /* Espaço para a barra inferior */
+}
 }
 
 /* ==============================================
