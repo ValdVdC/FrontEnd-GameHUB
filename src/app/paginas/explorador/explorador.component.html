@@ -59,7 +59,7 @@
                     <div class="genre-checkboxes">
                       <div *ngFor="let genre of genres" 
                           class="form-check option-genre"
-                          (click)="toggleGenre(genre);$event.stopPropagation()">
+                          (click)="toggleGenre(genre)">
                         <input 
                           type="checkbox" 
                           [id]="'genre-' + genre" 
