@@ -34,12 +34,11 @@
               (click)="isMobile && toggleDropdown('genre')">
                 <!-- Controle do Dropdown de Gêneros -->
                 <div class="dropdown-control" [class.expanded]="activeDropdown === 'genre'">
-                  <div class="form-check select-all" (click)="$event.stopPropagation()">
+                  <div class="form-check select-all" (click)="$event.stopPropagation()" (change)="toggleAllGenres()">
                     <input 
                       type="checkbox" 
                       id="select-all-genres"
                       [checked]="allGenresSelected"
-                      (change)="toggleAllGenres()"
                       class="form-check-input"> 
                     <label for="select-all-genres" class="form-check-label">
                       <span class="custom-checkbox"></span>
