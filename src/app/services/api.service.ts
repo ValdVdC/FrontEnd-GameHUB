@@ -36,7 +36,12 @@ export class ApiService {
   getJogoDetalhes(id:number):Observable<any>{
     return this.http.get(`${this.apiUrl}/${id}`)
   }
-  buscarJogoPorNome(nome:string):Observable<any>{
-    return this.http.get(`${this.apiUrl}/search/${nome}`)
+  buscarJogoPorNome(nome: string, page: number = 1, pageSize: number = 500): Observable<any> {
+    return this.http.get(`${this.apiUrl}/search/${nome}`, {
+      params: {
+        page: page.toString(),
+        pageSize: pageSize.toString()
+      }
+    });
   }
 }
