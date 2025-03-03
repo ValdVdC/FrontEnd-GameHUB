@@ -45,7 +45,7 @@ export class ExploradorComponent {
   selectedGenres: { [key: string]: boolean } = {};
   selectedRating: string = '';
   sortBy: string = 'relevance';
-  
+  genreFilterMode: 'inclusive' | 'exclusive' = 'inclusive';
   // Opções de filtro
   ratingOptions = [
     { value: '', label: 'Todas as avaliações' },
@@ -59,6 +59,12 @@ export class ExploradorComponent {
     { value: 'rating', label: 'Melhor Avaliados' },
     { value: 'name', label: 'Nome' }
   ];
+
+  onFilterModeChange() {
+    console.log('Modo de filtro alterado para:', this.genreFilterMode);
+    this.applyFilters(true);
+    this.salvarEstadoNoLocal();
+  }
   
   /* ==============================================
      3. PROPRIEDADES DE PAGINAÇÃO
@@ -149,6 +155,7 @@ export class ExploradorComponent {
       temMaisJogos: this.temMaisJogos,
       currentPage: this.currentPage,
       selectedGenres: this.selectedGenres,
+      genreFilterMode: this.genreFilterMode, // Adicionado
       selectedRating: this.selectedRating,
       sortBy: this.sortBy,
       searchTerm: this.searchTerm,
@@ -163,7 +170,7 @@ export class ExploradorComponent {
       console.warn('Não foi possível salvar o estado no localStorage', e);
     }
   }
-
+  
   private recuperarEstadoDoLocal() {
     try {
       const estadoSalvo = localStorage.getItem('exploradorEstado');
@@ -179,6 +186,7 @@ export class ExploradorComponent {
         this.temMaisJogos = estado.temMaisJogos !== undefined ? estado.temMaisJogos : true;
         this.currentPage = estado.currentPage || 1;
         this.selectedGenres = estado.selectedGenres || {};
+        this.genreFilterMode = estado.genreFilterMode || 'inclusive'; // Adicionado
         this.selectedRating = estado.selectedRating || '';
         this.sortBy = estado.sortBy || 'relevance';
         
@@ -545,7 +553,6 @@ export class ExploradorComponent {
       console.error('Erro ao aplicar filtros de busca:', error);
     }
   }
-
   private filterByGenres(games: Game[]): Game[] {
     const selectedGenresList = Object.entries(this.selectedGenres || {})
       .filter(([_, selected]) => selected)
@@ -561,18 +568,32 @@ export class ExploradorComponent {
         return false;
       }
       
-      // Se for array de objetos com name
-      if (typeof game.genres[0] === 'object' && game.genres[0] !== null) {
-        return selectedGenresList.some(genre => 
-          game.genres.some((g: any) => g.name === genre)
-        );
-      }
+      // Extrai os gêneros do jogo (seja de objetos ou strings)
+      const gameGenres = typeof game.genres[0] === 'object' && game.genres[0] !== null
+        ? game.genres.map((g: any) => g.name)
+        : game.genres;
       
-      // Se for array de strings
-      return selectedGenresList.some(genre => game.genres.includes(genre));
+      if (this.genreFilterMode === 'inclusive') {
+        // Modo inclusivo: Mostrar jogos que contêm PELO MENOS UM dos gêneros selecionados
+        return selectedGenresList.some(genre => gameGenres.includes(genre));
+      } else {
+        // Modo exclusivo: Mostrar jogos que contêm EXATAMENTE os gêneros selecionados (nem mais, nem menos)
+        // 1. Verificar se o jogo tem todos os gêneros selecionados
+        const temTodosGenerosSelecionados = selectedGenresList.every(genre => 
+          gameGenres.includes(genre)
+        );
+        
+        // 2. Verificar se o jogo não tem nenhum gênero adicional
+        const naoTemGenerosAdicionais = gameGenres.every(genre => 
+          selectedGenresList.includes(genre)
+        );
+        
+        // Retornar true se ambas as condições forem atendidas
+        return temTodosGenerosSelecionados && naoTemGenerosAdicionais;
+      }
     });
   }
-
+  
   private filterByRating(games: any[]): any[] {
     if (!this.selectedRating) return games;
     const minRating = parseInt(this.selectedRating);

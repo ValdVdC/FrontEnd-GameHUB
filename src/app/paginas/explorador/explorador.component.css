@@ -105,6 +105,7 @@
   height: 38px;
   display: flex;
   align-items: center;
+  width: 100%;
 }
 
 .dropdown-control:hover {
@@ -142,6 +143,27 @@
 .genre-filter-container {
   position: relative;
   z-index: 2;
+  display: block;
+  width: 100%;
+}
+
+.filter-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+/* Container do dropdown sem alterar seu tamanho */
+.genre-dropdown-container {
+  position: relative;
+  width: 100%;
+}
+
+.genre-dropdown {
+  position: relative;
+  padding-left: 0;
+  width: 100%;
 }
 
 .genre-checkboxes-dropdown {
@@ -166,6 +188,19 @@
   opacity: 1;
 }
 
+/* Modificar o comportamento do hover para incluir a sidebar */
+.genre-dropdown-container:hover .filter-mode-sidebar,
+.genre-dropdown-container:hover .genre-checkboxes-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Garantir que o dropdown fica aberto quando o mouse está sobre a dropdown-container */
+.genre-dropdown-container:hover .genre-checkboxes-dropdown {
+  max-height: 300px;
+  opacity: 1;
+}
+
 .dropdown-control.expanded .genre-checkboxes-dropdown {
   max-height: 300px;
   overflow-y: auto;
@@ -185,9 +220,94 @@
   border-radius: 4px;
 }
 
-.genre-dropdown {
+/* Sidebar de modo de filtro posicionada à esquerda do dropdown e alinhada com a área dos checkboxes */
+.filter-mode-sidebar {
+  position: absolute;
+  right: calc(100% + -1px); /* Removendo espaçamento para conectar diretamente */
+  top: 52px; /* Mantendo alinhado com o início da área de checkboxes */
+  background: linear-gradient(135deg, rgba(13, 13, 14, 0.8), rgba(43, 17, 65, 0.8));
+  border-radius: 8px 0 0 8px; /* Apenas cantos esquerdos arredondados */
+  padding: 8px;
+  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 4;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  border: 1px solid rgba(116, 239, 255, 0.3);
+  border-right: none; /* Removendo a borda direita */
+  width: auto;
+}
+
+
+
+/* Garantir que a sidebar e o dropdown pareçam conectados quando ativos */
+.genre-dropdown-container:hover .filter-mode-sidebar,
+.genre-dropdown-container:hover .genre-checkboxes-dropdown {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.sidebar-title {
+  font-size: 0.8rem;
+  color: #74efff;
+  text-align: center;
+  margin-bottom: 5px;
+  opacity: 0.7;
+}
+
+/* Opções de modo */
+.mode-option {
   position: relative;
-  padding-left: 0;
+}
+
+.mode-option input {
+  position: absolute;
+  opacity: 0;
+}
+
+.mode-option label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  background: rgba(22, 33, 62, 0.8);
+  border: 1px solid rgba(116, 239, 255, 0.3);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  color: #74efff;
+  opacity: 0.7;
+}
+
+.mode-option input:checked + label {
+  background: rgba(116, 239, 255, 0.2);
+  box-shadow: 0 0 10px rgba(116, 239, 255, 0.3);
+  opacity: 1;
+}
+
+/* Tooltip à direita */
+.mode-tooltip {
+  position: absolute;
+  left: calc(100% + 8px);
+  top: 50%;
+  transform: translateY(-50%);
+  background: rgba(22, 33, 62, 0.95);
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+  z-index: 10;
+}
+
+.mode-option:hover .mode-tooltip {
+  opacity: 1;
 }
 
 /* Checkboxes Styling */
@@ -575,9 +695,6 @@ h3 {
     margin-bottom: 15px;
   }
 }
-
-
-
 
 /* ==============================================
    12. CÓDIGOS GUARDADOS PARA POSSÍVEIS IMPLEMENTAÇÕES NO FUTURO

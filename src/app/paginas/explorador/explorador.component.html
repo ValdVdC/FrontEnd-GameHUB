@@ -21,13 +21,18 @@
           
           <!-- Linha de Filtros -->
           <div class="filters-row">
-            <!-- Filtro de Gêneros -->
-            <div class="filter-group genre-filter-container custom-filter">
+          <!-- Filtro de Gêneros -->
+          <div class="filter-group genre-filter-container custom-filter">
+            <div class="filter-header">
               <label>Gêneros</label>
+            </div>
+            <!-- Container que envolve tanto o dropdown quanto a sidebar para compartilhar o hover -->
+            <div class="genre-dropdown-container"
+                (mouseenter)="!isMobile && openDropdown('genre')"
+                (mouseleave)="!isMobile && closeDropdown('genre')">
+              
               <div class="genre-dropdown"
-                   (mouseenter)="!isMobile && openDropdown('genre')"
-                   (mouseleave)="!isMobile && closeDropdown('genre')"
-                   (click)="isMobile && toggleDropdown('genre')">
+                  (click)="isMobile && toggleDropdown('genre')">
                 
                 <!-- Controle do Dropdown de Gêneros -->
                 <div class="dropdown-control" [class.expanded]="activeDropdown === 'genre'">
@@ -49,8 +54,8 @@
                   <div class="genre-checkboxes-dropdown" [class.open]="activeDropdown === 'genre'">
                     <div class="genre-checkboxes">
                       <div *ngFor="let genre of genres" 
-                           class="form-check option-genre"
-                           (click)="toggleGenre(genre);$event.stopPropagation()">
+                          class="form-check option-genre"
+                          (click)="toggleGenre(genre);$event.stopPropagation()">
                         <input 
                           type="checkbox" 
                           [id]="'genre-' + genre" 
@@ -67,8 +72,36 @@
                   </div>
                 </div>
               </div>
+              
+              <!-- Filter Mode Sidebar -->
+              <div class="filter-mode-sidebar">
+                <div class="mode-option">
+                  <input type="radio" 
+                        id="filter-mode-inclusive" 
+                        name="genreFilterMode"
+                        [value]="'inclusive'"
+                        [(ngModel)]="genreFilterMode"
+                        (change)="onFilterModeChange()">
+                  <label for="filter-mode-inclusive">
+                    <i class="bi bi-filter"></i>
+                    <span class="mode-tooltip">Inclusivo</span>
+                  </label>
+                </div>
+                <div class="mode-option">
+                  <input type="radio" 
+                        id="filter-mode-exclusive" 
+                        name="genreFilterMode"
+                        [value]="'exclusive'"
+                        [(ngModel)]="genreFilterMode"
+                        (change)="onFilterModeChange()">
+                  <label for="filter-mode-exclusive">
+                    <i class="bi bi-filter-square"></i>
+                    <span class="mode-tooltip">Exclusivo</span>
+                  </label>
+                </div>
+              </div>
             </div>
-    
+          </div>
             <!-- Filtro de Avaliação -->
             <div class="filter-group rating-filter-container custom-filter">
               <label>Avaliação</label>
