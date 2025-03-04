@@ -63,7 +63,8 @@ export class ExploradorComponent {
   ];
 
   onFilterModeChange() {
-    console.log('Modo de filtro alterado para:', this.genreFilterMode);
+    this.setLoading(true); // Start loading
+  
     if (this.genreFilterMode === 'exclusive') {
       // No modo exclusivo, desmarca todos os gêneros por padrão
       Object.keys(this.selectedGenres).forEach(genre => {
@@ -75,8 +76,16 @@ export class ExploradorComponent {
         this.selectedGenres[genre] = true;
       });
     }
-    this.applyFilters(true);
-    this.salvarEstadoNoLocal();
+    
+    // Use setTimeout to allow UI to update before applying filters
+    setTimeout(() => {
+      if (this.isSearchMode) {
+        this.applySearchFilters(true);
+      } else {
+        this.applyFilters(true);
+      }
+      this.salvarEstadoNoLocal();
+    }, 100);
   }
 
   /* ==============================================
@@ -570,6 +579,7 @@ export class ExploradorComponent {
   ============================================== */
   private async applyFilters(resetPage: boolean = true) {
     try {
+      this.ensureLoadingCompletes();
       if (resetPage) {
         this.currentPage = 1;
       }
@@ -640,6 +650,7 @@ export class ExploradorComponent {
   }
 
   private async applySearchFilters(resetPage: boolean = true) {
+    this.ensureLoadingCompletes();
     try {
       if (resetPage) {
         this.currentPage = 1;
@@ -653,6 +664,8 @@ export class ExploradorComponent {
   
       if (!this.hasSelectedGenres) {
         this.filteredSearchResults = [];
+        this.setLoading(false); // Important: stop loading here
+        this.updateVisiblePages();
         return;
       }
   
@@ -665,16 +678,48 @@ export class ExploradorComponent {
       this.filteredSearchResults = filtered;
       this.updateVisiblePages();
       
+      // Add a maximum attempt counter for search mode
+      let attempts = 0;
+      const MAX_ATTEMPTS = 3;
+      
       // Verificar se precisamos carregar mais resultados
       const jogosNecessarios = this.currentPage * this.itemsPerPage;
-      if (filtered.length < jogosNecessarios && this.searchHasMore && !this.carregandoMais) {
+      while (filtered.length < jogosNecessarios && 
+             this.searchHasMore && 
+             !this.carregandoMais && 
+             attempts < MAX_ATTEMPTS) {
+        
         await this.carregarMaisResultadosBusca();
+        
+        // Reapply filters after loading more results
+        filtered = this.filterByGenres([...this.searchResults]);
+        filtered = this.filterByRating(filtered);
+        filtered = this.sortGames(filtered);
+        this.filteredSearchResults = filtered;
+        
+        attempts++;
+        
+        // If we're not getting more results, break out of the loop
+        if (filtered.length === 0 || 
+            (attempts > 1 && filtered.length === this.filteredSearchResults.length)) {
+          break;
+        }
       }
     } catch (error) {
       console.error('Erro ao aplicar filtros de busca:', error);
+    } finally {
+      this.setLoading(false); // Ensure loading is turned off
     }
   }
-
+  private ensureLoadingCompletes() {
+    // Safety mechanism to prevent infinite loading
+    setTimeout(() => {
+      if (this.loading) {
+        console.warn('Forcing loading state to complete after timeout');
+        this.setLoading(false);
+      }
+    }, 5000); // 5 second maximum loading time
+  }
   private filterByGenres(games: Game[]): Game[] {
     const selectedGenresList = Object.entries(this.selectedGenres || {})
       .filter(([_, selected]) => selected)
@@ -682,6 +727,11 @@ export class ExploradorComponent {
   
     if (selectedGenresList.length === 0) {
       return [];
+    }
+  
+    if (this.genreFilterMode === 'inclusive' && 
+        selectedGenresList.length === this.genres.length) {
+      return games;
     }
   
     return games.filter(game => {

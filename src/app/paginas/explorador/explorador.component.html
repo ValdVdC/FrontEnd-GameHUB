@@ -216,7 +216,10 @@
             <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
               <div class="game-card" (mousedown)="detalhesJogo(game.id)">
                 <div class="game-card-image">
-                  <img [src]="game.cover_url" [alt]="game.name" class="img-fluid" loading="lazy">
+                  <img [src]="game.cover_url"
+                  [alt]="game.name" 
+                  class="img-fluid" 
+                  loading="lazy">
                 </div>
                 <div class="game-card-content">
                   <h3>{{game.name}}</h3>
