@@ -1,8 +1,9 @@
 import { Component, HostListener } from '@angular/core';
-import { debounceTime, distinctUntilChanged, lastValueFrom, Subject, takeUntil } from 'rxjs';
+import { debounceTime, distinctUntilChanged, lastValueFrom, Subject, Subscription, takeUntil } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
 import { Game } from '../../models/game.model';
+import { GenreNavigationService } from '../../services/genre-navigation.service';
 
 @Component({
   selector: 'app-explorador',
@@ -105,13 +106,15 @@ export class ExploradorComponent {
   private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
   private intervalSalvarEstado: any;
+  private genreSubscription: Subscription = new Subscription();
 
   /* ==============================================
      5. CONSTRUTOR E MÉTODOS DE CICLO DE VIDA
   ============================================== */
   constructor(
     private apiService: ApiService,
-    private router: Router
+    private router: Router,
+    private genreNavigationService: GenreNavigationService
   ) {
     this.searchSubject.pipe(
       debounceTime(1000),
@@ -127,12 +130,55 @@ export class ExploradorComponent {
     this.setLoading(true);
     this.preLoading = true;
     
+    // Log adicional de depuração
+    console.log('Genres loaded:', this.genres);
+
     // Recuperar dados do localStorage
     const estadoRecuperado = this.recuperarEstadoDoLocal();
     
     // Carregar gêneros primeiro
     this.loadGenres().then(() => {
-      // Depois carregar jogos (se necessário)
+      console.log('Genres after loading:', this.genres);
+      console.log('Selected Genres:', this.selectedGenres);
+
+      const currentGenre = this.genreNavigationService.getCurrentGenre();
+      console.log('Current Genre from Service:', currentGenre);
+
+      if (currentGenre) {
+        console.log('Processando gênero navegado:', currentGenre);
+        
+        // Reset de todos os gêneros
+        Object.keys(this.selectedGenres).forEach(key => {
+          this.selectedGenres[key] = false;
+        });
+        
+        // Verificação de correspondência de gênero (com tratamento de case-sensitivity)
+        const matchedGenre = this.genres.find(
+          genre => genre.toLowerCase() === currentGenre.toLowerCase()
+        );
+        
+        if (matchedGenre) {
+          console.log('Gênero correspondente encontrado:', matchedGenre);
+          
+          // Marcar apenas o gênero correspondente
+          this.selectedGenres[matchedGenre] = true;
+          
+          // Aplicar filtros
+          if (this.isSearchMode) {
+            this.applySearchFilters(true);
+          } else {
+            this.applyFilters(true);
+          }
+          
+          // Limpar o gênero selecionado após processamento
+          this.genreNavigationService.clearSelectedGenre();
+        } else {
+          console.warn('Nenhum gênero correspondente encontrado para:', currentGenre);
+          console.warn('Gêneros disponíveis:', this.genres);
+        }
+      }
+
+      // Carregar jogos (se necessário)
       if (!estadoRecuperado || (this.games.length === 0 && !this.isSearchMode)) {
         this.loadInitialGames();
       } else if (this.isSearchMode && this.searchTerm && this.searchResults.length === 0) {
@@ -158,9 +204,31 @@ export class ExploradorComponent {
     
     // Salvar estado periodicamente
     this.intervalSalvarEstado = setInterval(() => this.salvarEstadoNoLocal(), 5000);
+    this.genreSubscription = this.genreNavigationService.selectedGenre$.subscribe(genre => {
+      if (genre) {
+        console.log('Navigated Genre:', genre); // Debug log
+  
+        Object.keys(this.selectedGenres).forEach(key => {
+          this.selectedGenres[key] = false;
+        });
+        
+        if (this.genres.includes(genre)) {
+          this.selectedGenres[genre] = true;
+
+          if (this.isSearchMode) {
+            this.applySearchFilters(true);
+          } else {
+            this.applyFilters(true);
+          }
+        }
+      }
+    });
   }
 
   ngOnDestroy() {
+    if (this.genreSubscription) {
+      this.genreSubscription.unsubscribe();
+    }
     this.destroy$.next();
     this.destroy$.complete();
     clearInterval(this.intervalSalvarEstado);
@@ -871,9 +939,21 @@ private sortGames(games: any[]): any[] {
      11. PAGINAÇÃO
   ============================================== */
   get pagedGames() {
-    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
-    return source.slice(startIndex, startIndex + this.itemsPerPage);
+    const startIndex = (this.currentPage - 1) * this.itemsPerPage;
+    const endIndex = startIndex + this.itemsPerPage;
+    
+    // Se ainda está carregando, ou não tem jogos suficientes e ainda podem ser carregados
+    const temMaisFonteDeJogos = this.isSearchMode ? this.searchHasMore : this.temMaisJogos;
+    
+    if (this.loading || (source.length < endIndex && temMaisFonteDeJogos)) {
+      // Mantém o loading se:
+      // 1. Ainda está carregando
+      // 2. Não tem 16 jogos e ainda pode carregar mais
+      return [];
+    }
+    
+    return source.slice(startIndex, endIndex);
   }
     
   get totalPages() {
@@ -921,15 +1001,20 @@ private sortGames(games: any[]): any[] {
   async changePage(page: number | any) {
     if (typeof page !== 'number' || page < 1 || this.loading) return;
     
+    // Preparar para a mudança de página
+    this.currentPage = page;
+    this.updateVisiblePages();
+    
     this.loading = true;
     
     try {
       const jogosNecessarios = page * this.itemsPerPage;
       const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
       
-      if (page > this.currentPage && source.length < jogosNecessarios) {
+      // Verificar se precisamos carregar mais conteúdo
+      if (source.length < jogosNecessarios) {
         if (this.isSearchMode) {
-          // Se estamos no modo de busca, carregamos mais resultados de busca
+          // Lógica de carregamento para modo de busca
           let tentativas = 0;
           const MAX_TENTATIVAS = 3;
           
@@ -937,19 +1022,17 @@ private sortGames(games: any[]): any[] {
             const jogosAntesDeCarregar = this.filteredSearchResults.length;
             
             await this.carregarMaisResultadosBusca();
+            await this.applySearchFilters(false);
             
-            if (this.filteredSearchResults.length > jogosAntesDeCarregar || 
-                this.filteredSearchResults.length >= jogosNecessarios) {
+            if (this.filteredSearchResults.length >= jogosNecessarios || 
+                !this.searchHasMore) {
               break;
             }
             
             tentativas++;
-            if (tentativas < MAX_TENTATIVAS) {
-              await new Promise(resolve => setTimeout(resolve, 1500));
-            }
           }
         } else {
-          // Lógica existente para carregar mais jogos regulares
+          // Lógica de carregamento para modo normal
           let tentativas = 0;
           const MAX_TENTATIVAS = this.genreFilterMode === 'exclusive' ? 6 : 3;
           
@@ -964,8 +1047,8 @@ private sortGames(games: any[]): any[] {
             await this.carregarMaisJogos();
             await this.applyFilters(false);
             
-            if (this.filteredGames.length > jogosAntesDeCarregar || 
-                this.filteredGames.length >= jogosNecessarios) {
+            if (this.filteredGames.length >= jogosNecessarios || 
+                !this.temMaisJogos) {
               break;
             }
             
@@ -978,7 +1061,7 @@ private sortGames(games: any[]): any[] {
         }
       }
       
-      // Atualizar a página atual
+      // Ajustar página atual baseado nos dados disponíveis
       const sourceAtual = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
       const paginasDisponiveis = Math.ceil(sourceAtual.length / this.itemsPerPage);
       this.currentPage = Math.min(page, Math.max(1, paginasDisponiveis));
@@ -986,6 +1069,7 @@ private sortGames(games: any[]): any[] {
       this.updateVisiblePages();
       this.salvarEstadoNoLocal();
     } finally {
+      // Garantir que o loading seja desativado
       this.loading = false;
     }
   }

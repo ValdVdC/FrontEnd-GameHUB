@@ -507,7 +507,7 @@ section {
   box-shadow: 0 2px 8px rgba(116, 239, 255, 0.3);
 }
 
-.genre-badge.active {
+.genre-badge:active {
   color: #0e0e20;
   background-color: rgba(116, 239, 255, 0.85);
   border-color: rgba(116, 239, 255, 1);

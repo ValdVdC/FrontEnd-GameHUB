@@ -4,6 +4,7 @@ import { ScrollService } from '../../services/scroll.service';
 import { Router } from '@angular/router';
 import { ApiResponse, Game, GenreCategory } from '../../models/game.model';
 import { lastValueFrom } from 'rxjs';
+import { GenreNavigationService } from '../../services/genre-navigation.service';
 
 @Component({
   selector: 'app-home',
@@ -40,7 +41,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   constructor(
     private apiService: ApiService, 
     private scrollService: ScrollService, 
-    private router: Router
+    private router: Router,
+    private genreNavigationService: GenreNavigationService
   ) {}
 
   ngOnInit(): void {
@@ -378,5 +380,15 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     calcularSecaoMaisVisivel();
     
     this.observerInitialized = true;
+  }
+  navegarParaExploradorComGenero(genre: string | { name: string }) {
+    // Handle both string and object genres
+    const genreName = typeof genre === 'string' ? genre : genre.name;
+    
+    // Set the genre to navigate to
+    this.genreNavigationService.navigateToGenre(genreName);
+    
+    // Navigate to the explorer page
+    this.router.navigate(['/explorador']);
   }
 }

@@ -50,7 +50,10 @@
             <!-- Área para gêneros e avaliação -->
             <div class="game-details">
               <div class="genre-container">
-                <span *ngFor="let genre of game.genres" class="genre-badge">
+                <span 
+                  *ngFor="let genre of game.genres" 
+                  class="genre-badge"
+                  (click)="navegarParaExploradorComGenero(genre)">
                   {{genre}}
                 </span>
               </div>
@@ -67,7 +70,7 @@
 </section>
 
 <!-- ==============================================
-     3. SEÇÃO DE CATEGORIAS DE JOGOS
+     3. SEÇÃO DE JOGOS POR CATEGORIA
 ============================================== -->
 <section id="categories" class="categories-section py-5">
   <div class="container">
