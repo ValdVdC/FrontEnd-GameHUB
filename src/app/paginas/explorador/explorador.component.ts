@@ -1023,12 +1023,11 @@ private sortGames(games: any[]): any[] {
             
             await this.carregarMaisResultadosBusca();
             await this.applySearchFilters(false);
-            
-            if (this.filteredSearchResults.length >= jogosNecessarios || 
-                !this.searchHasMore) {
-              break;
-            }
-            
+              
+            if (this.filteredSearchResults.length > jogosAntesDeCarregar || 
+              this.filteredSearchResults.length >= jogosNecessarios) {
+            break;
+          }
             tentativas++;
           }
         } else {
@@ -1047,9 +1046,9 @@ private sortGames(games: any[]): any[] {
             await this.carregarMaisJogos();
             await this.applyFilters(false);
             
-            if (this.filteredGames.length >= jogosNecessarios || 
-                !this.temMaisJogos) {
-              break;
+            if (this.filteredGames.length > jogosAntesDeCarregar || 
+              this.filteredGames.length >= jogosNecessarios) {
+            break;
             }
             
             tentativas++;
