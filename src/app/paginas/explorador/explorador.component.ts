@@ -1,10 +1,35 @@
-import { Component, HostListener } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener } from '@angular/core';
 import { debounceTime, distinctUntilChanged, lastValueFrom, Subject, Subscription, takeUntil } from 'rxjs';
 import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
 import { Game } from '../../models/game.model';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
+interface PaginationState {
+  currentPage: number;
+  totalPages: number;
+  hasMorePages: boolean;
+  lastIncomplete: boolean;
+  consecutiveIncomplete: number;
+  itemsPerPage: number;
+  loadedUntilPage: number;
+  maxAttempts: number;
+  minItemsPerRequest: number;
+  saved?: boolean;
+}
 
+interface PaginationStates {
+  normal: PaginationState;
+  inclusive: PaginationState;
+  exclusive: PaginationState;
+  search: PaginationState;
+  searchFiltered: PaginationState;
+}
+interface SearchTermState {
+  hasMore: boolean;
+  lastPage: number;
+  totalResults: number;
+  apiPageReached: number;
+}
 @Component({
   selector: 'app-explorador',
   templateUrl: './explorador.component.html',
@@ -21,12 +46,119 @@ export class ExploradorComponent {
   genres: string[] = [];
   genresLoaded = false;
   loading: boolean = false;
+  private loadingStartTime: number | null = null;
+  private loadingTimeout: any = null;
+  private safetyTimeout: any = null;
+  isLongLoading: boolean = false;
+  showCancelButton: boolean = false;
+  
   private setLoading(state: boolean) {
-    this.loading = state;
-    if (!state) {
-      this.preLoading = false;
+    if (state) {
+        this.preLoading = true;
+        this.loading = true;
+        this.gerenciarTimersLoading(true);
+    } else {
+        this.gerenciarTimersLoading(false, this.carregandoMais);
+        
+        setTimeout(() => {
+            this.loading = false;
+            this.preLoading = false;
+            this.changeDetectorRef.detectChanges();
+            window.dispatchEvent(new Event('scroll'));
+        }, 100);
     }
   }
+  private gerenciarTimersLoading(state: boolean, isCarregandoMais: boolean = false) {
+    if (state) {
+        // Iniciar os temporizadores sem afetar os estados que causam problemas
+        if (!this.loadingStartTime) {
+            this.loadingStartTime = Date.now();
+            
+            // Define o timeout para loading longo (global)
+            this.loadingTimeout = setTimeout(() => {
+                if (this.loading || this.carregandoMais) {
+                    console.log('Ativando loading longo...');
+                    this.isLongLoading = true;
+                    this.showCancelButton = true;
+                    this.changeDetectorRef.detectChanges();
+                }
+            }, 10000); // 10 segundos
+        } else {
+            // Se já tiver um timestamp, verifica se já passou do tempo para loading longo
+            const tempoDecorrido = Date.now() - this.loadingStartTime;
+            if (tempoDecorrido >= 10000 && !this.isLongLoading) {
+                this.isLongLoading = true;
+                this.showCancelButton = true;
+                this.changeDetectorRef.detectChanges();
+            }
+        }
+
+        // Define um novo timeout de segurança para cada chamada
+        if (this.safetyTimeout) {
+            clearTimeout(this.safetyTimeout);
+        }
+        this.safetyTimeout = setTimeout(() => {
+            if (this.loading || this.carregandoMais) {
+                console.warn('Loading foi resetado por timeout de segurança após 30 segundos');
+                this.cancelLoading();
+            }
+        }, 30000); // 30 segundos
+    } else {
+        // Limpa apenas o timeout de segurança atual
+        if (this.safetyTimeout) {
+            clearTimeout(this.safetyTimeout);
+            this.safetyTimeout = null;
+        }
+        
+        // Se não houver mais nenhum loading ativo e não estiver carregando mais
+        if (!isCarregandoMais) {
+            if (this.loadingTimeout) {
+                clearTimeout(this.loadingTimeout);
+                this.loadingTimeout = null;
+            }
+            this.loadingStartTime = null;
+            this.isLongLoading = false;
+            this.showCancelButton = false;
+        }
+    }
+  }
+
+  cancelLoading() {
+    // Guarda os jogos atuais
+    const jogosAtuais = [...this.filteredGames];
+    
+    // Limpa os timeouts
+    if (this.loadingTimeout) {
+        clearTimeout(this.loadingTimeout);
+        this.loadingTimeout = null;
+    }
+
+    // Prepara o novo estado
+    this.genreFilterMode = 'inclusive';
+    Object.keys(this.selectedGenres).forEach(genre => {
+        this.selectedGenres[genre] = true;
+    });
+    this.includeNoGenre = true;
+    this.currentPage = 1;
+
+    // Usa requestAnimationFrame para sincronizar as mudanças visuais
+    requestAnimationFrame(() => {
+        // Mantém os jogos anteriores temporariamente
+        this.filteredGames = jogosAtuais;
+        
+        // Desativa estados de loading
+        this.loading = false;
+        this.preLoading = false;
+        this.isLongLoading = false;
+        this.showCancelButton = false;
+
+        // Inicia o carregamento dos novos jogos
+        Promise.resolve().then(() => {
+            this.loadInitialGames();
+        });
+    });
+  }
+
   // Estado da interface
   isMobile: boolean = false;
   activeDropdown: string | null = null;
@@ -43,7 +175,28 @@ export class ExploradorComponent {
   searchHasMore: boolean = true;
   filteredSearchResults: Game[] = [];
   isSearchMode: boolean = false;
+  private searchTermsState: Map<string, SearchTermState> = new Map();
+  private getSearchTermState(term: string): SearchTermState {
+    if (!this.searchTermsState.has(term)) {
+      this.searchTermsState.set(term, {
+        hasMore: true,
+        lastPage: 1,
+        totalResults: 0,
+        apiPageReached: 0
+      });
+    }
+    return this.searchTermsState.get(term)!;
+  }
   
+  // Método para salvar o estado atual do termo de busca
+  private updateSearchTermState(term: string, updates: Partial<SearchTermState>) {
+    const currentState = this.getSearchTermState(term);
+    this.searchTermsState.set(term, {
+      ...currentState,
+      ...updates
+    });
+  }
+
   // Filtros
   selectedGenres: { [key: string]: boolean } = {};
   selectedRating: string = '';
@@ -64,30 +217,87 @@ export class ExploradorComponent {
   ];
 
   onFilterModeChange() {
-    this.setLoading(true); // Start loading
-  
-    if (this.genreFilterMode === 'exclusive') {
-      // No modo exclusivo, desmarca todos os gêneros por padrão
-      Object.keys(this.selectedGenres).forEach(genre => {
-        this.selectedGenres[genre] = false;
-      });
-    } else {
-      // No modo inclusivo, marca todos os gêneros por padrão
-      Object.keys(this.selectedGenres).forEach(genre => {
-        this.selectedGenres[genre] = true;
-      });
-    }
+    // Salva o estado anterior para comparação
+    const modoAnterior = this.genreFilterMode;
     
-    // Use setTimeout to allow UI to update before applying filters
-    setTimeout(() => {
-      if (this.isSearchMode) {
-        this.applySearchFilters(true);
-      } else {
-        this.applyFilters(true);
-      }
-      this.salvarEstadoNoLocal();
-    }, 100);
-  }
+    if (this.genreFilterMode === 'exclusive') {
+        // Limpa seleções no modo exclusivo
+        Object.keys(this.selectedGenres).forEach(genre => {
+            this.selectedGenres[genre] = false;
+        });
+        this.includeNoGenre = false;
+        
+        this.filteredGames = [];
+        this.filteredSearchResults = [];
+        this.showNoGenresMessage = true;
+        this.currentPage = 1;
+        
+        this.updateVisiblePages();
+        this.salvarEstadoNoLocal();
+        return;
+    } 
+    
+    // Modo inclusivo
+    // Se estamos vindo do modo exclusivo, precisamos resetar o array de jogos
+    if (modoAnterior === 'exclusive') {
+        // Reset completo ao retornar para o inclusivo
+        this.games = []; // Limpa todos os jogos armazenados
+        this.apiPage = 1; // Reseta a página da API
+        this.paginasConsecutivasIncompletas = 0;
+        
+        // Carrega novamente todos os jogos
+        this.setLoading(true);
+        this.loadInitialGames().then(() => {
+            // Seleciona todos os gêneros
+            Object.keys(this.selectedGenres).forEach(genre => {
+                this.selectedGenres[genre] = true;
+            });
+            this.includeNoGenre = true;
+            this.showNoGenresMessage = false;
+            this.currentPage = 1;
+            
+            this.salvarEstadoNoLocal();
+        });
+    } else {
+        // Comportamento normal se não estiver vindo do exclusivo
+        const state = this.getCurrentPaginationState();
+        Object.keys(this.selectedGenres).forEach(genre => {
+            this.selectedGenres[genre] = true;
+        });
+        this.includeNoGenre = true;
+        this.showNoGenresMessage = false;
+        this.currentPage = state.currentPage;
+        
+        if (this.isSearchMode && this.searchResults.length > 0) {
+            this.filteredSearchResults = [...this.searchResults];
+            this.updateVisiblePages();
+        } else if (!this.isSearchMode && this.games.length > 0) {
+            this.applyFilters(true);  // Chamar com reset para garantir consistência
+        } else {
+            this.setLoading(true);
+            Promise.resolve().then(async () => {
+                try {
+                    if (this.isSearchMode) {
+                        await this.applySearchFilters(true);
+                    } else {
+                        await this.applyFilters(true);
+                    }
+                } finally {
+                    this.setLoading(false);
+                }
+            });
+        }
+        
+        this.salvarEstadoNoLocal();
+    }
+
+    requestAnimationFrame(() => {
+        const paginationElement = document.querySelector('.pagination-container');
+        if (paginationElement) {
+            paginationElement.classList.add('visible');
+        }
+    });
+}
 
   /* ==============================================
      3. PROPRIEDADES DE PAGINAÇÃO
@@ -99,6 +309,89 @@ export class ExploradorComponent {
   temMaisJogos: boolean = true;
   preLoading: boolean = false;
   pagesToShow: (number | string)[] = [];
+  shouldShowPagination: boolean = false;
+  transitioning: boolean = false;
+
+  private paginationStates: PaginationStates = {
+    normal: {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0,
+        itemsPerPage: 16,
+        loadedUntilPage: 1,
+        maxAttempts: 3,
+        minItemsPerRequest: 12,
+        saved: false
+    },
+    inclusive: {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0,
+        itemsPerPage: 16,
+        loadedUntilPage: 1,
+        maxAttempts: 5,
+        minItemsPerRequest: 8
+    },
+    exclusive: {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0,
+        itemsPerPage: 16,
+        loadedUntilPage: 1,
+        maxAttempts: 10,
+        minItemsPerRequest: 4
+    },
+    search: {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0,
+        itemsPerPage: 16,
+        loadedUntilPage: 1,
+        maxAttempts: 3,
+        minItemsPerRequest: 12,
+        saved: false,
+    },
+    searchFiltered: {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0,
+        itemsPerPage: 16,
+        loadedUntilPage: 1,
+        maxAttempts: 5,
+        minItemsPerRequest: 8
+    }
+};
+
+private getCurrentPaginationState(): PaginationState {
+  const mode = this.getCurrentMode();
+  return this.paginationStates[mode];
+}
+
+private getCurrentMode(): keyof PaginationStates {
+  if (this.isSearchMode) {
+      if (Object.keys(this.selectedGenres).some(g => this.selectedGenres[g])) {
+          return 'searchFiltered';
+      }
+      return 'search';
+  } else {
+      if (this.genreFilterMode === 'exclusive') {
+          return 'exclusive';
+      } else if (this.genreFilterMode === 'inclusive') {
+          return 'inclusive';
+      }
+      return 'normal';
+  }
+}
 
   /* ==============================================
      4. PROPRIEDADES DE CONTROLE RXJS
@@ -114,7 +407,8 @@ export class ExploradorComponent {
   constructor(
     private apiService: ApiService,
     private router: Router,
-    private genreNavigationService: GenreNavigationService
+    private genreNavigationService: GenreNavigationService,
+    private changeDetectorRef: ChangeDetectorRef
   ) {
     this.searchSubject.pipe(
       debounceTime(1000),
@@ -226,6 +520,9 @@ export class ExploradorComponent {
   }
 
   ngOnDestroy() {
+    if (this.loadingTimeout) {
+      clearTimeout(this.loadingTimeout);
+  }
     if (this.genreSubscription) {
       this.genreSubscription.unsubscribe();
     }
@@ -234,195 +531,236 @@ export class ExploradorComponent {
     clearInterval(this.intervalSalvarEstado);
     this.salvarEstadoNoLocal();
   }
-  private resetLoadingAfterTimeout(timeoutMs: number = 10000) {
-    setTimeout(() => {
-      if (this.loading) {
-        console.warn('Loading foi resetado por timeout de segurança');
-        this.setLoading(false);
-      }
-    }, timeoutMs);
-  }
-  
+
   /* ==============================================
      6. GESTÃO DE ESTADO (SESSIONSTORAGE)
   ============================================== */
   private salvarEstadoNoLocal() {
-    const estado = {
-      games: this.games,
-      apiPage: this.apiPage,
-      temMaisJogos: this.temMaisJogos,
-      currentPage: this.currentPage,
-      selectedGenres: this.selectedGenres,
-      genreFilterMode: this.genreFilterMode,
-      selectedRating: this.selectedRating,
-      sortBy: this.sortBy,
-      
-      // Estado de busca
-      searchTerm: this.searchTerm,
-      searchResults: this.searchResults,
-      isSearchMode: this.isSearchMode,
-      searchApiPage: this.searchApiPage,
-      searchHasMore: this.searchHasMore,
-      
-      expiraEm: Date.now() + (30 * 60 * 1000)
-    };
-    
     try {
-      localStorage.setItem('exploradorEstado', JSON.stringify(estado));
-    } catch (e) {
-      console.warn('Não foi possível salvar o estado no localStorage', e);
-    }
-  }
-  
-  // Atualizar o método recuperarEstadoDoLocal para recuperar o estado de busca
-  private recuperarEstadoDoLocal() {
-    try {
-      const estadoSalvo = localStorage.getItem('exploradorEstado');
-      
-      if (estadoSalvo) {
-        const estado = JSON.parse(estadoSalvo);
-        if (estado.expiraEm && estado.expiraEm < Date.now()) {
-          localStorage.removeItem('exploradorEstado');
-          return false;
-        }
-        
-        // Recuperar estado dos jogos
-        this.games = estado.games || [];
-        this.apiPage = estado.apiPage || 1;
-        this.temMaisJogos = estado.temMaisJogos !== undefined ? estado.temMaisJogos : true;
-        this.currentPage = estado.currentPage || 1;
-        this.selectedGenres = estado.selectedGenres || {};
-        this.genreFilterMode = estado.genreFilterMode || 'inclusive';
-        this.selectedRating = estado.selectedRating || '';
-        this.sortBy = estado.sortBy || 'relevance';
-        
-        // Recuperar estado de busca
-        this.searchTerm = estado.searchTerm || '';
-        this.searchResults = estado.searchResults || [];
-        this.isSearchMode = estado.isSearchMode || false;
-        this.searchApiPage = estado.searchApiPage || 1;
-        this.searchHasMore = estado.searchHasMore !== undefined ? estado.searchHasMore : true;
-        
-        console.log('Estado restaurado do localStorage com', this.games.length, 'jogos');
-        
-        // Se estava no modo de busca, aplica os filtros de busca
-        if (this.isSearchMode) {
-          this.applySearchFilters(false);
-        } else {
-          this.applyFilters(false);
-        }
-        
-        return true;
-      }
-      return false;
-    } catch (e) {
-      console.warn('Erro ao recuperar estado do localStorage', e);
-      return false;
-    }
-  }
+        // Versão otimizada do estado, salvando apenas dados essenciais
+        const estadoOtimizado = {
+            currentPage: this.currentPage,
+            apiPage: this.apiPage,
+            selectedGenres: this.selectedGenres,
+            genreFilterMode: this.genreFilterMode,
+            selectedRating: this.selectedRating,
+            sortBy: this.sortBy,
+            isSearchMode: this.isSearchMode,
+            searchTerm: this.searchTerm,
+            // Salvar apenas IDs e dados mínimos dos jogos
+            games: this.games.map(game => ({
+                id: game.id,
+                name: game.name,
+                genres: game.genres,
+                total_rating: game.total_rating
+            })),
+            // Guardar apenas referência aos IDs dos jogos filtrados
+            filteredGamesIds: this.filteredGames.map(game => game.id),
+            expiraEm: Date.now() + (30 * 60 * 1000)
+        };
 
+        localStorage.setItem('exploradorEstado', JSON.stringify(estadoOtimizado));
+        
+    } catch (e) {
+        console.warn('Erro ao salvar estado completo, tentando salvar versão mínima...');
+        try {
+            // Versão ainda mais reduzida em caso de erro
+            const estadoMinimo = {
+                currentPage: this.currentPage,
+                selectedGenres: this.selectedGenres,
+                genreFilterMode: this.genreFilterMode,
+                expiraEm: Date.now() + (30 * 60 * 1000)
+            };
+            localStorage.setItem('exploradorEstado_minimo', JSON.stringify(estadoMinimo));
+        } catch (finalError) {
+            console.error('Falha total ao salvar estado:', finalError);
+        }
+    }
+}
+
+
+
+private recuperarEstadoDoLocal() {
+    try {
+        const chunkCount = parseInt(localStorage.getItem('exploradorEstado_count') || '0');
+        if (chunkCount > 0) {
+            let estadoString = '';
+            for (let i = 0; i < chunkCount; i++) {
+                const chunk = localStorage.getItem(`exploradorEstado_${i}`);
+                if (chunk) estadoString += chunk;
+            }
+            
+            if (estadoString) {
+                const estado = JSON.parse(estadoString);
+                
+                if (estado.expiraEm && estado.expiraEm < Date.now()) {
+                    this.limparEstadoLocal();
+                    return false;
+                }
+                
+                // Restaura o estado
+                this.games = estado.games;
+                this.apiPage = estado.apiPage;
+                this.temMaisJogos = estado.temMaisJogos;
+                this.currentPage = estado.currentPage;
+                this.selectedGenres = estado.selectedGenres;
+                this.genreFilterMode = estado.genreFilterMode;
+                this.selectedRating = estado.selectedRating;
+                this.sortBy = estado.sortBy;
+                this.searchTerm = estado.searchTerm;
+                this.searchResults = estado.searchResults;
+                this.isSearchMode = estado.isSearchMode;
+                this.searchApiPage = estado.searchApiPage;
+                this.searchHasMore = estado.searchHasMore;
+                
+                return true;
+            }
+        }
+        return false;
+    } catch (e) {
+        console.warn('Erro ao recuperar estado:', e);
+        this.limparEstadoLocal();
+        return false;
+    }
+}
+
+private limparEstadoLocal() {
+    const chunkCount = parseInt(localStorage.getItem('exploradorEstado_count') || '0');
+    for (let i = 0; i < chunkCount; i++) {
+        localStorage.removeItem(`exploradorEstado_${i}`);
+    }
+    localStorage.removeItem('exploradorEstado_count');
+}
+//APENAS PARA DEBUG
+limparEstadoERecarregar() {
+  this.limparEstadoLocal();
+  this.games = [];
+  this.filteredGames = [];
+  this.searchResults = [];
+  this.filteredSearchResults = [];
+  this.currentPage = 1;
+  this.apiPage = 1;
+  this.searchApiPage = 1;
+  this.temMaisJogos = true;
+  this.searchHasMore = true;
+  this.ultimaPaginaIncompleta = false;
+  this.jogosDaUltimaPagina = 0;
+  this.paginasConsecutivasIncompletas = 0;
+  
+  // Recarrega os dados
+  if (this.isSearchMode && this.searchTerm) {
+      this.performSearch(this.searchTerm);
+  } else {
+      this.loadInitialGames();
+  }
+}
   /* ==============================================
      7. CARREGAMENTO DE DADOS
   ============================================== */
+
   private async loadInitialGames() {
     try {
+      // Reset normal mode pagination
+      this.completelyResetPagination('normal');
+      
       this.apiPage = 1;
       const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
       this.games = response.games;
       this.temMaisJogos = response.pagination.hasMore;
       
-      // Garantir que a ordenação seja aplicada corretamente
+      // Guarantee sorting is correctly applied
       if (this.sortBy === 'relevance') {
         this.filteredGames = [...this.games];
       } else {
         this.applyFilters(true);
       }
+      
+      // Force refresh pagination display
+      this.updateVisiblePages();
     } catch (error) {
       console.error('Erro ao carregar jogos:', error);
-      // Garantir que temos algo para mostrar, mesmo que vazio
       this.filteredGames = [];
     } finally {
+      // Ensure loading is turned off
       this.setLoading(false);
-      // Ativar o timer de segurança para casos futuros
-      this.resetLoadingAfterTimeout();
     }
   }
+
+
+  private ultimaPaginaIncompleta: boolean = false;
+  private jogosDaUltimaPagina: number = 0;
+  private ultimaPaginaConfirmada: boolean = false;
+  private paginasConsecutivasIncompletas: number = 0;
+  lastKnownValidPage: number = 1;
 
   async carregarMaisJogos() {
-    if (this.carregandoMais) return;
-  
-    this.carregandoMais = true;
-    this.setLoading(true);
-    
-    try {
-      const resultado = await this.carregarJogosComRetry(3, 1500);
-      
-      if (!resultado.sucesso) {
-        console.error('Falha ao carregar mais jogos após múltiplas tentativas');
-        this.temMaisJogos = true;
-        return;
-      }
-      
-      const response = resultado.dados;
-      
-      if (!response || !response.games || !Array.isArray(response.games)) {
-        console.error('Resposta da API inválida:', response);
-        this.temMaisJogos = true;
-        return;
-      }
-      
-      // Criar Set com IDs existentes para evitar duplicatas
-      const existingIds = new Set(this.games.map(game => game.id));
-      
-      // Filtrar apenas jogos novos
-      const newGames = response.games.filter(game => !existingIds.has(game.id));
-      
-      if (newGames.length > 0) {
-        // Adicionar os novos jogos preservando a ordem da API
-        if (this.sortBy === 'relevance') {
-          this.games = [...this.games, ...newGames];
-        } else {
-          // Para outros tipos de ordenação, podemos adicionar e ordenar depois
-          this.games = [...this.games, ...newGames];
-        }
-        this.apiPage++;
-        this.temMaisJogos = response.pagination.hasMore || newGames.length >= 10;
-        await this.applyFilters(false);
-      } else {
-        if (response.pagination.hasMore) {
-          this.apiPage++;
-          setTimeout(() => {
-            this.carregandoMais = false;
-            this.carregarMaisJogos();
-          }, 1500);
-        } else {
-          this.temMaisJogos = false;
-          setTimeout(() => this.verificarSeRealmenteAcabou(), 10000);
-        }
-      }
-    } catch (error) {
-      console.error('Erro ao carregar mais jogos:', error);
-      this.temMaisJogos = true;
-    } finally {
-      this.carregandoMais = false;
-      this.setLoading(false);
+    if (this.isSearchMode) {
+      return this.carregarMaisResultadosBusca();
     }
-  }
+    if (!this.temMaisJogos) {
+        return false; // Retorna false para indicar que não carregou novos jogos
+    }
 
-  private verificarSeRealmenteAcabou() {
-    if (this.currentPage >= this.totalPages && !this.temMaisJogos) {
-      console.log('Verificando novamente se realmente acabaram os jogos...');
-      
-      this.apiPage += 1;
-      this.carregandoMais = false;
-      
-      this.carregarMaisJogos().then(() => {
-        if (!this.temMaisJogos) {
-          console.log('Confirmado: não há mais jogos disponíveis');
-        } else {
-          console.log('Encontramos mais jogos após verificação adicional');
+    this.carregandoMais = true;
+    this.gerenciarTimersLoading(true, true); 
+    try {
+        const resultado = await this.carregarJogosComRetry(3, 1500);
+        
+        if (!resultado.sucesso || !resultado.dados?.games?.length) {
+            console.log('Não há mais jogos para carregar');
+            this.temMaisJogos = false;
+            return false;
         }
-      });
+        
+        // Verifica se recebemos jogos repetidos
+        const jogosAntigos = new Set(this.games.map(g => g.id));
+        const novosJogos = resultado.dados.games.filter(g => !jogosAntigos.has(g.id));
+
+        const maxTentativasSemNovosJogos = this.genreFilterMode === 'exclusive' ? 4 : 6;
+
+        if (novosJogos.length === 0) {
+            this.paginasConsecutivasIncompletas++;
+            if (this.paginasConsecutivasIncompletas >= maxTentativasSemNovosJogos) {
+                console.log('Não há mais jogos novos disponíveis');
+                this.temMaisJogos = false;
+                return false;
+            }
+        } else {
+            this.paginasConsecutivasIncompletas = 0;
+            
+            // Adiciona novos jogos sem duplicatas
+            this.games = [...this.games, ...novosJogos];
+            this.apiPage++;
+
+            // Limpa qualquer duplicata que possa ter ocorrido
+            if (this.games.length > jogosAntigos.size + novosJogos.length) {
+                this.eliminarDuplicatas();
+            } else {
+                await this.applyFilters(false);
+            }
+            
+            // Retorna true quando carregamos novos jogos com sucesso
+            return true;
+        }
+
+        // Verifica se precisamos carregar mais
+        if (this.temMaisJogos && 
+            this.filteredGames.length < (this.currentPage * this.itemsPerPage) && 
+            this.paginasConsecutivasIncompletas < maxTentativasSemNovosJogos) {
+            setTimeout(() => {
+                this.carregandoMais = false;
+                this.carregarMaisJogos();
+            }, 1500);
+        }
+        
+        return false; // Se não adicionou novos jogos
+          
+    } catch (error) {
+        console.error('Erro ao carregar mais jogos:', error);
+        return false;
+    } finally {
+        this.carregandoMais = false;
+        this.gerenciarTimersLoading(false, false);
     }
   }
 
@@ -471,35 +809,36 @@ export class ExploradorComponent {
     let delayMs = delayInicial;
     
     while (tentativa < maxTentativas) {
-      try {
-        const generosAtivos = this.genreFilterMode === 'exclusive' ? 
-          [] : 
-          Object.keys(this.selectedGenres).filter(g => this.selectedGenres[g]);
-          
-        const response = await lastValueFrom(
-          this.apiService.buscarJogos(this.apiPage, 500, generosAtivos)
-        );
-        
-        return { 
-          sucesso: true, 
-          dados: response,
-          mensagem: 'Sucesso'
-        };
-      } catch (error) {
-        console.warn(`Tentativa ${tentativa + 1} falhou. Tentando novamente em ${delayMs}ms`);
-        tentativa++;
-        
-        await new Promise(resolve => setTimeout(resolve, delayMs));
-        delayMs = Math.min(delayMs * 1.5, 10000);
-      }
+        try {
+            // Correção na lógica dos gêneros ativos
+            const generosAtivos = this.genreFilterMode === 'exclusive' ? 
+                Object.keys(this.selectedGenres).filter(g => this.selectedGenres[g]) : 
+                [];
+                
+            const response = await lastValueFrom(
+                this.apiService.buscarJogos(this.apiPage, 500, generosAtivos)
+            );
+            
+            return { 
+                sucesso: true, 
+                dados: response,
+                mensagem: 'Sucesso'
+            };
+        } catch (error) {
+            console.warn(`Tentativa ${tentativa + 1} falhou. Tentando novamente em ${delayMs}ms`);
+            tentativa++;
+            
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            delayMs = Math.min(delayMs * 1.5, 10000);
+        }
     }
     
     return { 
-      sucesso: false, 
-      dados: null,
-      mensagem: `Falha após ${maxTentativas} tentativas`
+        sucesso: false, 
+        dados: null,
+        mensagem: `Falha após ${maxTentativas} tentativas`
     };
-  }
+}
 
   async forcarCarregamentoMaisJogos() {
     this.carregandoMais = true;
@@ -535,110 +874,418 @@ export class ExploradorComponent {
   /* ==============================================
      8. BUSCA DE JOGOS
   ============================================== */
+
   onSearch() {
-    if (this.searchTerm?.trim() !== '') {
-      // Se há um termo de busca, limpa os jogos e realiza a busca
-      this.games = [];
-      this.searchSubject.next(this.searchTerm);
-    } else {
-      // Se o termo de busca foi apagado, primeiro definimos loading
-      this.setLoading(true);
-      // Depois enviamos o termo vazio para o searchSubject
-      this.searchSubject.next('');
+  
+      if (this.searchTerm?.trim() !== '') {
+        this.searchSubject.next(this.searchTerm);
+      } else {
+        this.searchSubject.next('');
+      }
     }
+  
+  private completelyResetPagination(mode: 'search' | 'normal') {
+    if (mode === 'normal') {
+      // Completely reset all pagination values for normal mode
+      this.currentPage = 1;
+      this.apiPage = 1; // Reset API page number
+      this.temMaisJogos = true; // Force this to true
+      this.paginasConsecutivasIncompletas = 0;
+      
+      // Reset normal state object
+      Object.assign(this.paginationStates.normal, {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0
+      });
+    } else {
+      // Completely reset search pagination
+      this.searchApiPage = 1;
+      this.searchHasMore = true;
+      
+      // Reset search state object
+      Object.assign(this.paginationStates.search, {
+        currentPage: 1,
+        totalPages: 1,
+        hasMorePages: true,
+        lastIncomplete: false,
+        consecutiveIncomplete: 0
+      });
+    }
+    
+    // Force pagination update
+    this.updateVisiblePages();
+  }
+ 
+private async performSearch(term: string) {
+  // Imediatamente ativar loading no início da função
+  this.setLoading(true);
+  
+  // Definir um tempo mínimo para o loading ficar visível
+  const tempoMinimoLoading = 1000; // 1 segundo
+  const inicioLoading = Date.now();
+  
+  // Se o termo está vazio, voltar para o modo normal
+  if (!term?.trim()) {
+      if (this.isSearchMode) {
+          // Salvamos explicitamente o estado da busca atual
+          this.paginationStates.search.currentPage = this.currentPage;
+          this.paginationStates.search.hasMorePages = this.searchHasMore;
+          this.paginationStates.search.consecutiveIncomplete = 0;
+          
+          // Restaurar o estado da paginação normal
+          const normalState = this.paginationStates.normal;
+          this.currentPage = normalState.currentPage;
+          this.temMaisJogos = normalState.hasMorePages;
+          
+          // Definir modo normal sem recarregar dados
+          this.isSearchMode = false;
+          
+          // Apenas atualizar a UI sem fazer requisições
+          this.updateVisiblePages();
+          
+          // Garantir tempo mínimo de loading para feedback visual
+          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+      } else {
+          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+      }
+      return;
   }
   
-  private async performSearch(term: string) {
-    if (!term?.trim()) {
-      this.isSearchMode = false;
-      await this.loadInitialGames(); // Já define loading=false internamente
-      return;
-    }
+  const termNormalizado = term.trim().toLowerCase();
   
-    this.searchApiPage = 1;
-    this.loading = true;
-    
-    try {
-      const response = await lastValueFrom(this.apiService.buscarJogoPorNome(term, this.searchApiPage));
+  // Verificar se já temos um estado salvo para este termo
+  const termState = this.getSearchTermState(termNormalizado);
+  
+  // MUDANÇA IMPORTANTE: Definir imediatamente o modo de busca para esconder os jogos normais
+  this.isSearchMode = true;
+  
+  // Verificar se temos resultados em cache para este termo exato
+  if (termState.totalResults > 0 && termState.apiPageReached > 0) {
+      // Recuperar explicitamente os resultados do termo atual
+      // Esta é a parte que precisamos modificar para garantir que os resultados sejam atualizados
       
-      if (response && response.games) {
-        this.searchResults = response.games;
-        this.searchHasMore = response.pagination.hasMore;
-        
-        // Garantir que cada jogo tenha um array de gêneros, mesmo que vazio
-        this.searchResults = this.searchResults.map(game => ({
-          ...game,
-          genres: game.genres || []
-        }));
-        
-        this.isSearchMode = true;
-        this.applySearchFilters(true);
-        
-        // Salvar estado após busca completa
-        this.salvarEstadoNoLocal();
-      } else {
-        this.searchResults = [];
-        this.searchHasMore = false;
-        this.isSearchMode = true;
-        this.applySearchFilters(true);
+      // Limpar resultados antigos e carregar os novos
+      this.searchResults = [];
+      this.filteredSearchResults = [];
+      
+      // Aqui vamos buscar os resultados na API novamente
+      try {
+          // Fazer a requisição de busca
+          const response = await lastValueFrom(this.apiService.buscarJogoPorNome(termNormalizado, 1));
+          
+          if (response && response.games && response.games.length > 0) {
+              // Processar os resultados
+              this.searchResults = response.games.map((game: Game) => ({
+                  ...game,
+                  genres: game.genres || []
+              }));
+              
+              // Atualizar flag de mais resultados com base na resposta da API
+              this.searchHasMore = response.pagination.hasMore;
+              
+              // Atualizar o estado da paginação de busca
+              this.paginationStates.search.hasMorePages = this.searchHasMore;
+              this.paginationStates.search.currentPage = 1;
+              this.paginationStates.search.consecutiveIncomplete = 0;
+              this.currentPage = 1;
+              
+              // Atualizar o estado para este termo de busca
+              this.updateSearchTermState(termNormalizado, {
+                  hasMore: this.searchHasMore,
+                  totalResults: this.searchResults.length,
+                  apiPageReached: 1, // Começamos na página 1
+                  lastPage: 1
+              });
+              
+              // Aplicar filtros sem resetar a página (já está na página 1)
+              await this.applySearchFilters(true);
+              
+              // Atualizar a UI após todas as operações
+              this.updateVisiblePages();
+              
+              // Salvar o estado
+              this.salvarEstadoNoLocal();
+              
+              // Garantir tempo mínimo de loading para feedback visual
+              this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+          } else {
+              // Tratar caso de nenhum resultado
+              this.searchResults = [];
+              this.searchHasMore = false;
+              this.filteredSearchResults = [];
+              this.paginationStates.search.hasMorePages = false;
+              
+              // Armazenar que este termo não tem resultados
+              this.updateSearchTermState(termNormalizado, {
+                  hasMore: false,
+                  totalResults: 0,
+                  apiPageReached: 1,
+                  lastPage: 1
+              });
+              
+              this.updateVisiblePages();
+              
+              // Garantir tempo mínimo de loading para feedback visual
+              this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+          }
+      } catch (error) {
+          console.error('Erro na busca:', error);
+          this.searchResults = [];
+          this.searchHasMore = false;
+          this.filteredSearchResults = [];
+          this.paginationStates.search.hasMorePages = false;
+          this.updateVisiblePages();
+          
+          // Garantir tempo mínimo de loading para feedback visual
+          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
       }
-    } catch (error) {
+      
+      return;
+  }
+  
+  // Limpar resultados anteriores ANTES de buscar novos
+  this.searchResults = [];
+  this.filteredSearchResults = [];
+  
+  // Reset completo do estado de paginação da busca
+  this.completelyResetPagination('search');
+  
+  // Atualizar UI imediatamente para mostrar loading sem jogos antigos
+  this.updateVisiblePages();
+  
+  try {
+      // Fazer a requisição de busca
+      const response = await lastValueFrom(this.apiService.buscarJogoPorNome(termNormalizado, this.searchApiPage));
+      
+      if (response && response.games && response.games.length > 0) {
+          // Processar os resultados
+          this.searchResults = response.games.map((game: Game) => ({
+              ...game,
+              genres: game.genres || []
+          }));
+          
+          // Atualizar flag de mais resultados com base na resposta da API
+          this.searchHasMore = response.pagination.hasMore;
+          
+          // Atualizar o estado da paginação de busca
+          this.paginationStates.search.hasMorePages = this.searchHasMore;
+          this.paginationStates.search.currentPage = 1;
+          this.paginationStates.search.consecutiveIncomplete = 0;
+          
+          // Armazenar o estado para este termo de busca
+          this.updateSearchTermState(termNormalizado, {
+              hasMore: this.searchHasMore,
+              totalResults: this.searchResults.length,
+              apiPageReached: this.searchApiPage,
+              lastPage: 1
+          });
+          
+          // Aplicar filtros sem resetar a página (já está na página 1)
+          await this.applySearchFilters(true);
+          
+          // Atualizar a UI após todas as operações
+          this.updateVisiblePages();
+          
+          // Salvar o estado
+          this.salvarEstadoNoLocal();
+          
+          // Garantir tempo mínimo de loading para feedback visual
+          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+      } else {
+          // Tratar caso de nenhum resultado
+          this.searchResults = [];
+          this.searchHasMore = false;
+          this.filteredSearchResults = [];
+          this.paginationStates.search.hasMorePages = false;
+          
+          // Armazenar que este termo não tem resultados
+          this.updateSearchTermState(termNormalizado, {
+              hasMore: false,
+              totalResults: 0,
+              apiPageReached: this.searchApiPage,
+              lastPage: 1
+          });
+          
+          this.updateVisiblePages();
+          
+          // Garantir tempo mínimo de loading para feedback visual
+          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+      }
+  } catch (error) {
       console.error('Erro na busca:', error);
       this.searchResults = [];
-      this.isSearchMode = true;
-      this.applySearchFilters(true);
-    } finally {
-      this.loading = false;
+      this.searchHasMore = false;
+      this.filteredSearchResults = [];
+      this.paginationStates.search.hasMorePages = false;
+      this.updateVisiblePages();
+      
+      // Garantir tempo mínimo de loading para feedback visual
+      this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+  }
+}
+
+disableNextArrow: boolean = false;
+
+  private garantirTempoMinimoLoading(inicioLoading: number, tempoMinimo: number): Promise<void> {
+    const tempoDecorrido = Date.now() - inicioLoading;
+    const tempoRestante = Math.max(0, tempoMinimo - tempoDecorrido);
+    
+    if (tempoRestante > 0) {
+        return new Promise<void>(resolve => {
+            setTimeout(() => {
+                this.setLoading(false);
+                resolve();
+            }, tempoRestante);
+        });
+    } else {
+        this.setLoading(false);
+        return Promise.resolve();
     }
   }
   
   async carregarMaisResultadosBusca() {
-    if (!this.searchHasMore || this.carregandoMais) return;
+    const state = this.getCurrentPaginationState();
+    if (!this.searchHasMore || this.carregandoMais) return false;
     
     this.carregandoMais = true;
-    this.loading = true;
+    const termNormalizado = this.searchTerm.trim().toLowerCase();
+    const termState = this.getSearchTermState(termNormalizado);
     
     try {
-      this.searchApiPage++;
-      
-      const response = await lastValueFrom(
-        this.apiService.buscarJogoPorNome(this.searchTerm, this.searchApiPage)
-      );
-      
-      if (response && response.games && response.games.length > 0) {
-        // Criar Set com IDs existentes para evitar duplicatas
-        const existingIds = new Set(this.searchResults.map(game => game.id));
+        this.searchApiPage++;
         
-        // Filtrar apenas jogos novos
-        const newGames = response.games.filter((game: Game) => !existingIds.has(game.id))
-        .map((game: Game) => ({
-          ...game,
-          genres: game.genres || []
-        }));
+        const response = await lastValueFrom(
+            this.apiService.buscarJogoPorNome(this.searchTerm, this.searchApiPage)
+        );
         
-        if (newGames.length > 0) {
-          this.searchResults = [...this.searchResults, ...newGames];
-          this.searchHasMore = response.pagination.hasMore;
-          await this.applySearchFilters(false);
-        } else if (response.pagination.hasMore) {
-          // Se não recebemos novos jogos mas a API diz que há mais,
-          // tentamos novamente com a próxima página
-          setTimeout(() => {
-            this.carregandoMais = false;
-            this.carregarMaisResultadosBusca();
-          }, 1500);
+        if (response && response.games) {
+            // Criar Set com IDs existentes para evitar duplicatas
+            const existingIds = new Set(this.searchResults.map(game => game.id));
+            
+            // Filtrar apenas jogos novos
+            const newGames = response.games
+                .filter((game: Game) => !existingIds.has(game.id))
+                .map((game: Game) => ({
+                    ...game,
+                    genres: game.genres || []
+                }));
+            
+            // Caso 1: Recebemos novos jogos da API
+            if (newGames.length > 0) {
+                this.searchResults = [...this.searchResults, ...newGames];
+                
+                // Atualizar o estado hasMore da API
+                this.searchHasMore = response.pagination.hasMore;
+                state.hasMorePages = response.pagination.hasMore;
+                
+                // Atualizar o estado específico deste termo de busca
+                this.updateSearchTermState(termNormalizado, {
+                    hasMore: this.searchHasMore,
+                    totalResults: this.searchResults.length,
+                    apiPageReached: this.searchApiPage
+                });
+                
+                // Resetar contador de páginas incompletas consecutivas
+                state.consecutiveIncomplete = 0;
+                
+                // Se recebemos menos jogos que o esperado e a API diz que não há mais,
+                // marcamos como último lote incompleto
+                if (newGames.length < state.itemsPerPage && !response.pagination.hasMore) {
+                    state.lastIncomplete = true;
+                } else {
+                    state.lastIncomplete = false;
+                }
+                
+                await this.applySearchFilters(false);
+                
+                // ADICIONADO: Forçar atualização das páginas visíveis
+                this.updateVisiblePages();
+                return true;
+            } 
+            // Caso 2: API retornou jogos, mas todos são duplicatas
+            else if (response.games.length > 0) {
+                // Se a API retornou jogos (mesmo duplicados) e diz que tem mais, tentamos novamente
+                if (response.pagination.hasMore && 
+                    state.consecutiveIncomplete < state.maxAttempts) {
+                    state.consecutiveIncomplete++;
+                    setTimeout(() => {
+                        this.carregandoMais = false;
+                        this.carregarMaisResultadosBusca();
+                    }, 300);
+                    return false;
+                } 
+                // Se a API retornou só duplicatas e diz que não tem mais, realmente acabou
+                else {
+                    this.searchHasMore = false;
+                    state.hasMorePages = false;
+                    state.lastIncomplete = true;
+                    
+                    // Atualizar o estado específico deste termo
+                    this.updateSearchTermState(termNormalizado, {
+                        hasMore: false,
+                        apiPageReached: this.searchApiPage
+                    });
+                    
+                    // ADICIONADO: Forçar atualização das páginas visíveis
+                    this.updateVisiblePages();
+                    return false;
+                }
+            }
+            // Caso 3: API não retornou nenhum jogo
+            else {
+                this.searchHasMore = false;
+                state.hasMorePages = false;
+                state.lastIncomplete = true;
+                
+                // Atualizar o estado específico deste termo
+                this.updateSearchTermState(termNormalizado, {
+                    hasMore: false,
+                    apiPageReached: this.searchApiPage
+                });
+                
+                // ADICIONADO: Forçar atualização das páginas visíveis
+                this.updateVisiblePages();
+                return false;
+            }
         } else {
-          this.searchHasMore = false;
+            // Nenhum resultado retornado da API
+            this.searchHasMore = false;
+            state.hasMorePages = false;
+            state.lastIncomplete = true;
+            
+            // Atualizar o estado específico deste termo
+            this.updateSearchTermState(termNormalizado, {
+                hasMore: false,
+                apiPageReached: this.searchApiPage
+            });
+            
+            // ADICIONADO: Forçar atualização das páginas visíveis
+            this.updateVisiblePages();
+            return false;
         }
-      } else {
-        this.searchHasMore = false;
-      }
     } catch (error) {
-      console.error('Erro ao carregar mais resultados de busca:', error);
-      this.searchHasMore = true; // Permitir novas tentativas
+        console.error('Erro ao carregar mais resultados de busca:', error);
+        state.consecutiveIncomplete++;
+        if (state.consecutiveIncomplete >= state.maxAttempts) {
+            this.searchHasMore = false;
+            state.hasMorePages = false;
+            state.lastIncomplete = true;
+            
+            // Atualizar o estado específico deste termo
+            this.updateSearchTermState(termNormalizado, {
+                hasMore: false,
+                apiPageReached: this.searchApiPage
+            });
+            
+            // ADICIONADO: Forçar atualização das páginas visíveis
+            this.updateVisiblePages();
+        }
+        return false;
     } finally {
-      this.carregandoMais = false;
-      this.loading = false;
+        this.carregandoMais = false;
     }
   }
 
@@ -646,196 +1293,214 @@ export class ExploradorComponent {
      9. FILTROS E ORDENAÇÃO
   ============================================== */
   private async applyFilters(resetPage: boolean = true) {
+    const state = this.getCurrentPaginationState();
     try {
-      this.ensureLoadingCompletes();
-      if (resetPage) {
-        this.currentPage = 1;
-      }
-  
-      if (!this.hasSelectedGenres) {
-        this.filteredGames = [];
-        this.updateVisiblePages();
-        return;
-      }
-  
-      // Indicador de carregamento ao iniciar filtros
-      this.loading = true;
-  
-      // Filtrar os jogos atuais
-      let filtered = this.filterByGenres([...this.games]);
-      filtered = this.filterByRating(filtered);
-      
-      if (this.sortBy !== 'relevance') {
-        filtered = this.sortGames(filtered);
-      }
-  
-      // Determinar se precisamos de mais jogos
-      const jogosNecessarios = this.itemsPerPage * this.currentPage;
-      const precisaMaisJogos = filtered.length < jogosNecessarios && this.temMaisJogos;
-      
-      // Carregar mais jogos se necessário
-      let tentativas = 0;
-      // Aumentar o número máximo de tentativas para o modo exclusivo
-      const MAX_TENTATIVAS = this.genreFilterMode === 'exclusive' ? 20 : 10;
-      
-      while (precisaMaisJogos && tentativas < MAX_TENTATIVAS) {
-        const jogosAntes = filtered.length;
-        
-        // Deixe o loading ativo durante carregamento
-        this.loading = true;
-        await this.carregarMaisJogos();
-        
-        filtered = this.filterByGenres([...this.games]);
-        filtered = this.filterByRating(filtered);
-        filtered = this.sortGames(filtered);
-        
-        // No modo exclusivo, podemos obter menos resultados, então sejamos mais pacientes
-        if (filtered.length <= jogosAntes) {
-          if (this.genreFilterMode === 'exclusive' && tentativas < MAX_TENTATIVAS / 2) {
-            tentativas++; // Continue tentando no modo exclusivo
-            continue;
-          } else if (tentativas > 2) {
-            this.temMaisJogos = false;
-            break;
-          }
+        this.ensureLoadingCompletes();
+        if (resetPage) {
+            this.currentPage = 1;
         }
-        
-        if (filtered.length >= jogosNecessarios) {
-          break;
-        }
-        
-        tentativas++;
-      }
-      
-      this.filteredGames = filtered;
-      this.updateVisiblePages();
-    } catch (error) {
-      console.error('Erro ao aplicar filtros:', error);
-    } finally {
-      // Só define loading como false quando todo o processo terminar
-      this.loading = false;
-    }
-  }
 
-  private async applySearchFilters(resetPage: boolean = true) {
-    this.ensureLoadingCompletes();
-    try {
-      if (resetPage) {
-        this.currentPage = 1;
-      }
-  
-      // Verificar se temos resultados de busca, senão realizar a busca novamente
-      if (this.searchResults.length === 0 && this.searchTerm) {
-        await this.performSearch(this.searchTerm);
-        return; // performSearch já aplicará os filtros
-      }
-  
-      if (!this.hasSelectedGenres) {
-        this.filteredSearchResults = [];
-        this.setLoading(false); // Important: stop loading here
-        this.updateVisiblePages();
-        return;
-      }
-  
-      let filtered = this.filterByGenres([...this.searchResults]);
-      filtered = this.filterByRating(filtered);
-      
-      // Aplicar ordenação
-      filtered = this.sortGames(filtered);
-      
-      this.filteredSearchResults = filtered;
-      this.updateVisiblePages();
-      
-      // Add a maximum attempt counter for search mode
-      let attempts = 0;
-      const MAX_ATTEMPTS = 3;
-      
-      // Verificar se precisamos carregar mais resultados
-      const jogosNecessarios = this.currentPage * this.itemsPerPage;
-      while (filtered.length < jogosNecessarios && 
-             this.searchHasMore && 
-             !this.carregandoMais && 
-             attempts < MAX_ATTEMPTS) {
-        
-        await this.carregarMaisResultadosBusca();
-        
-        // Reapply filters after loading more results
-        filtered = this.filterByGenres([...this.searchResults]);
-        filtered = this.filterByRating(filtered);
-        filtered = this.sortGames(filtered);
-        this.filteredSearchResults = filtered;
-        
-        attempts++;
-        
-        // If we're not getting more results, break out of the loop
-        if (filtered.length === 0 || 
-            (attempts > 1 && filtered.length === this.filteredSearchResults.length)) {
-          break;
+        // Verifica se há gêneros selecionados
+        if (!this.hasSelectedGenres) {
+            this.filteredGames = [];
+            this.updateVisiblePages();
+            this.loading = true
+            this.showNoGenresMessage = true;
+            return;
         }
-      }
+
+        // Ativa o loading
+        this.loading = true
+
+        // Filtra os jogos atuais
+        let filtered = this.filterByGenres([...this.games]);
+        filtered = this.filterByRating(filtered);
+
+        // Aplica a ordenação
+        if (this.sortBy !== 'relevance') {
+            filtered = this.sortGames(filtered);
+        }
+
+        // Determina se precisamos de mais jogos
+        const jogosNecessarios = this.itemsPerPage * this.currentPage;
+        const precisaMaisJogos = filtered.length < jogosNecessarios && this.temMaisJogos;
+
+        // Lógica específica para o modo exclusivo
+        if (this.genreFilterMode === 'exclusive') {
+            let tentativas = 0;
+            const MAX_TENTATIVAS = 10; // Número máximo de tentativas para carregar mais jogos
+
+            // Enquanto precisamos de mais jogos e ainda há tentativas disponíveis
+            while (precisaMaisJogos && tentativas < MAX_TENTATIVAS) {
+                const jogosAntes = filtered.length;
+
+                // Carrega mais jogos
+                await this.carregarMaisJogos();
+
+                // Reaplica os filtros após carregar mais jogos
+                filtered = this.filterByGenres([...this.games]);
+                filtered = this.filterByRating(filtered);
+                filtered = this.sortGames(filtered);
+
+                // Se não conseguimos novos jogos após o carregamento
+                if (filtered.length <= jogosAntes) {
+                    tentativas++;
+                } else {
+                    tentativas = 0; // Reseta o contador de tentativas se obtivermos novos jogos
+                }
+
+                // Atualiza a flag de necessidade de mais jogos
+                if (filtered.length >= jogosNecessarios) {
+                    break;
+                }
+            }
+
+            // Se esgotamos as tentativas sem conseguir novos jogos
+            if (tentativas >= MAX_TENTATIVAS) {
+                this.temMaisJogos = false;
+            }
+        } else {
+            // Lógica para outros modos (inclusivo, busca, etc.)
+            if (precisaMaisJogos) {
+                await this.carregarMaisJogos();
+                filtered = this.filterByGenres([...this.games]);
+                filtered = this.filterByRating(filtered);
+                filtered = this.sortGames(filtered);
+            }
+        }
+
+        // Atualiza os jogos filtrados
+        this.filteredGames = filtered;
+        this.updateVisiblePages();
+
     } catch (error) {
-      console.error('Erro ao aplicar filtros de busca:', error);
+        console.error('Erro ao aplicar filtros:', error);
     } finally {
-      this.setLoading(false); // Ensure loading is turned off
+        // Desativa o loading ao finalizar
+        this.loading = false
     }
-  }
-  private ensureLoadingCompletes() {
-    // Safety mechanism to prevent infinite loading
-    setTimeout(() => {
-      if (this.loading) {
-        console.warn('Forcing loading state to complete after timeout');
-        this.setLoading(false);
+}
+
+private async applySearchFilters(resetPage: boolean = true) {
+  try {
+    // Remova a chamada para ensureLoadingCompletes() aqui, pois já estamos
+    // garantindo o tempo mínimo no performSearch
+    
+    if (resetPage) {
+      this.currentPage = 1;
+    }
+
+    // Verificar se temos resultados de busca, senão realizar a busca novamente
+    if (this.searchResults.length === 0 && this.searchTerm) {
+      // O performSearch vai gerenciar o estado de loading
+      return; 
+    }
+
+    if (!this.hasSelectedGenres) {
+      this.filteredSearchResults = [];
+      this.updateVisiblePages();
+      // Não desative o loading aqui - deixe para o performSearch fazer isso
+      return;
+    }
+
+    let filtered = this.filterByGenres([...this.searchResults]);
+    filtered = this.filterByRating(filtered);
+    
+    // Aplicar ordenação
+    filtered = this.sortGames(filtered);
+    
+    this.filteredSearchResults = filtered;
+    this.updateVisiblePages();
+    
+    // Add a maximum attempt counter for search mode
+    let attempts = 0;
+    const MAX_ATTEMPTS = 3;
+    
+    // Verificar se precisamos carregar mais resultados
+    const jogosNecessarios = this.currentPage * this.itemsPerPage;
+    while (filtered.length < jogosNecessarios && 
+          this.searchHasMore && 
+          !this.carregandoMais && 
+          attempts < MAX_ATTEMPTS) {
+      
+      await this.carregarMaisResultadosBusca();
+      
+      // Reapply filters after loading more results
+      filtered = this.filterByGenres([...this.searchResults]);
+      filtered = this.filterByRating(filtered);
+      filtered = this.sortGames(filtered);
+      this.filteredSearchResults = filtered;
+      
+      attempts++;
+      
+      // If we're not getting more results, break out of the loop
+      if (filtered.length === 0 || 
+          (attempts > 1 && filtered.length === this.filteredSearchResults.length)) {
+        break;
       }
-    }, 5000); // 5 second maximum loading time
+    }
+  } catch (error) {
+    console.error('Erro ao aplicar filtros de busca:', error);
   }
+}
+
+  private ensureLoadingCompletes() {
+    // Garantir um tempo mínimo de loading para feedback visual
+    const loadingStarted = this.loadingStartTime || Date.now();
+    const elapsedTime = Date.now() - loadingStarted;
+    const minLoadingTime = 500; // 500ms como tempo mínimo de loading
+    
+    if (elapsedTime < minLoadingTime) {
+
+      return new Promise(resolve => {
+        setTimeout(resolve, minLoadingTime - elapsedTime);
+      });
+    }
+    
+    return Promise.resolve();
+  }
+  
   private filterByGenres(games: Game[]): Game[] {
     const selectedGenresList = Object.entries(this.selectedGenres || {})
-      .filter(([_, selected]) => selected)
-      .map(([genre]) => genre);
-  
-    if (selectedGenresList.length === 0) {
-      return [];
+        .filter(([_, selected]) => selected)
+        .map(([genre]) => genre);
+
+    // Se não há gêneros selecionados E não incluímos jogos sem gênero
+    if (selectedGenresList.length === 0 && !this.includeNoGenre) {
+        this.shouldShowPagination = false;
+        return [];
     }
-  
-    if (this.genreFilterMode === 'inclusive' && 
-        selectedGenresList.length === this.genres.length) {
-      return games;
-    }
-  
+
     return games.filter(game => {
-      // Verifica se game.genres existe e é um array
-      if (!Array.isArray(game.genres) || game.genres === null) {
-        return false;
-      }
-      
-      // Extrai os gêneros do jogo (seja de objetos ou strings)
-      const gameGenres = typeof game.genres[0] === 'object' && game.genres[0] !== null
-        ? game.genres.map((g: any) => g.name)
-        : game.genres;
-      
-      if (this.genreFilterMode === 'inclusive') {
-        // Modo inclusivo: Mostrar jogos que contêm PELO MENOS UM dos gêneros selecionados
-        return selectedGenresList.some(genre => gameGenres.includes(genre));
-      } else {
-        // Modo exclusivo: Mostrar jogos que contêm EXATAMENTE os gêneros selecionados (nem mais, nem menos)
-        
-        // Verifica se o jogo tem exatamente os mesmos gêneros que foram selecionados
-        
-        // 1. Verificar se o jogo tem todos os gêneros selecionados
-        const temTodosGenerosSelecionados = selectedGenresList.every(genre => 
-          gameGenres.includes(genre)
-        );
-        
-        // 2. Verificar se o jogo não tem nenhum gênero adicional
-        const naoTemGenerosAdicionais = gameGenres.every(genre => 
-          selectedGenresList.includes(genre)
-        );
-        
-        // Retornar true se ambas as condições forem atendidas
-        return temTodosGenerosSelecionados && naoTemGenerosAdicionais;
-      }
+        // Se o jogo não tem gêneros
+        if (!Array.isArray(game.genres) || game.genres === null || game.genres.length === 0) {
+            return this.includeNoGenre;
+        }
+
+        // Se temos APENAS jogos sem gênero selecionado (nenhum gênero regular)
+        if (selectedGenresList.length === 0 && this.includeNoGenre) {
+            return false; // Queremos apenas jogos sem gênero neste caso
+        }
+
+        const gameGenres = typeof game.genres[0] === 'object' && game.genres[0] !== null
+            ? game.genres.map((g: any) => g.name)
+            : game.genres;
+
+        if (this.genreFilterMode === 'inclusive') {
+            return selectedGenresList.some(genre => gameGenres.includes(genre));
+        } else {
+            const temTodosGenerosSelecionados = selectedGenresList.every(genre => 
+                gameGenres.includes(genre)
+            );
+
+            const naoTemGenerosAdicionais = gameGenres.every(genre => 
+                selectedGenresList.includes(genre)
+            );
+
+            return temTodosGenerosSelecionados && naoTemGenerosAdicionais;
+        }
     });
-  }
+}
   
   private filterByRating(games: any[]): any[] {
     if (!this.selectedRating) return games;
@@ -868,208 +1533,783 @@ private sortGames(games: any[]): any[] {
      10. GESTÃO DE GÊNEROS
   ============================================== */
   get hasSelectedGenres(): boolean {
-    // Verifica apenas gêneros que existem na lista atual
+    // Se jogos sem gênero está selecionado, já considera como tendo seleção válida
+    if (this.includeNoGenre) {
+        return true;
+    }
+    
+    // Se não, verifica se há algum gênero regular selecionado
     return this.genres.some(genre => this.selectedGenres[genre] === true);
-  }
+}
 
   get allGenresSelected(): boolean {
     return Object.values(this.selectedGenres).every(value => value);
   }
 
-  toggleGenre(genre: string) {
-    this.selectedGenres[genre] = !this.selectedGenres[genre];
-    this.updateAllSelected();
+  get hasAnyGenreSelected(): boolean {
+    return Object.values(this.selectedGenres).some(selected => selected);
+ }
+
+  // Getter para verificar se os gêneros devem estar desabilitados
+  get isNoGenreMode(): boolean {
+      return this.genreFilterMode === 'exclusive' && this.includeNoGenre;
+  }
+
+  // Getter para verificar se "Jogos sem gênero" deve estar desabilitado
+  get isGenreSelectionDisabled(): boolean {
+      return this.genreFilterMode === 'exclusive' && this.hasAnyGenreSelected;
+  }
+  includeNoGenre: boolean = true;
+
+  toggleNoGenre() {
+    this.includeNoGenre = !this.includeNoGenre;
     
+    // Reset do estado da paginação
+    const state = this.getCurrentPaginationState();
+    state.currentPage = 1;
+    this.currentPage = 1;
+    state.consecutiveIncomplete = 0;
+    state.lastIncomplete = false;
+    state.hasMorePages = true;
+    
+    this.applyFilters(true);
+    this.updateVisiblePages();
+}
+
+toggleGenre(genre: string) {
+  
+    if (this.genreFilterMode === 'exclusive') {
+      const generosSelecionados = Object.values(this.selectedGenres).filter(selected => selected).length;
+      const estadoAnterior = this.selectedGenres[genre];
+      
+      // Se estiver tentando selecionar mais um gênero
+      if (!estadoAnterior && generosSelecionados >= 6) {
+          // Aqui você pode adicionar uma notificação para o usuário se quiser
+          console.warn('Limite de 6 gêneros atingido no modo exclusivo');
+          return;
+      }
+  }
+
+  // Resto do código existente...
+  const estadoAnterior = this.selectedGenres[genre];
+    this.selectedGenres[genre] = !estadoAnterior;
+
+    const state = this.getCurrentPaginationState();
+    
+    // Reset do estado da paginação
+    state.currentPage = 1;
+    this.currentPage = 1;
+    state.consecutiveIncomplete = 0;
+    state.lastIncomplete = false;
+    state.hasMorePages = true;
+
+    // Verifica se ainda há algum gênero selecionado
     const haveraSelecionados = Object.values(this.selectedGenres).some(selected => selected);
 
     // Se não haverá nenhum gênero selecionado
     if (!haveraSelecionados) {
-      if (this.isSearchMode) {
-        this.filteredSearchResults = [];
-      } else {
-        this.filteredGames = [];
-      }
-      this.showNoGenresMessage = true;
-      this.salvarEstadoNoLocal();
-      return; // Sai da função sem iniciar o carregamento
-    }
-
-    this.loading = true;
-
-    setTimeout(async () => {
-      try {
-        if (this.isSearchMode) {
-          await this.applySearchFilters(true);
+        if (this.includeNoGenre) {
+            // Se jogos sem gênero está ativo, mostra apenas eles
+            this.showNoGenresMessage = false;
+            if (this.isSearchMode) {
+                this.applySearchFilters(true);
+            } else {
+                this.applyFilters(true);
+            }
         } else {
-          await this.applyFilters(true);
+            // Se não há jogos sem gênero selecionado, mostra mensagem
+            if (this.isSearchMode) {
+                this.filteredSearchResults = [];
+            } else {
+                this.filteredGames = [];
+            }
+            this.showNoGenresMessage = true;
+            
+            requestAnimationFrame(() => {
+                this.updateVisiblePages();
+                const paginationElement = document.querySelector('.pagination-container');
+                if (paginationElement) {
+                    paginationElement.classList.remove('visible');
+                }
+            });
         }
+        
         this.salvarEstadoNoLocal();
-      } finally {
-        // loading será desativado no finally do applyFilters/applySearchFilters
-      }
-    }, 100);
-  }
-
-  toggleAllGenres() {
-    const newState = !this.allGenresSelected;
-    this.genres.forEach(genre => this.selectedGenres[genre] = newState);
-
-    console.log('Estado dos gêneros após toggleAllGenres:', this.selectedGenres, 'hasSelectedGenres:', this.hasSelectedGenres);
-    
-    if (this.isSearchMode) {
-      this.applySearchFilters(true);
-    } else {
-      this.applyFilters(true); 
+        return;
     }
+
+// Se haverá gêneros selecionados
+this.showNoGenresMessage = false;
+
+// Verifica se já temos jogos suficientes antes de mostrar loading
+const source = this.isSearchMode ? this.searchResults : this.games;
+const filtered = this.filterByGenres([...source]);
+const jogosNecessarios = state.itemsPerPage;
+
+if (filtered.length >= jogosNecessarios) {
+    // Se já temos jogos suficientes, aplica os filtros sem loading
+    if (this.isSearchMode) {
+        this.filteredSearchResults = this.filterByRating(filtered);
+        this.filteredSearchResults = this.sortGames(this.filteredSearchResults);
+    } else {
+        this.filteredGames = this.filterByRating(filtered);
+        this.filteredGames = this.sortGames(this.filteredGames);
+    }
+
+    this.updateVisiblePages();
+    // Importante: verificar se há jogos filtrados antes de mostrar a paginação
+    const temJogos = this.isSearchMode ? 
+        this.filteredSearchResults.length > 0 : 
+        this.filteredGames.length > 0;
+
+    requestAnimationFrame(() => {
+        const paginationContainer = document.querySelector('.pagination-container');
+        if (paginationContainer) {
+            if (temJogos) {
+                paginationContainer.classList.add('visible');
+            } else {
+                paginationContainer.classList.remove('visible');
+            }
+        }
+    });
+    
     this.salvarEstadoNoLocal();
+    return;
+}
+
+// Se não temos jogos suficientes, mostra loading
+this.setLoading(true);
+
+Promise.resolve().then(async () => {
+    try {
+        if (this.isSearchMode) {
+            await this.applySearchFilters(true);
+        } else {
+            await this.applyFilters(true);
+        }
+        
+        // Importante: verificar se há jogos após aplicar os filtros
+        const temJogos = this.isSearchMode ? 
+            this.filteredSearchResults.length > 0 : 
+            this.filteredGames.length > 0;
+
+        requestAnimationFrame(() => {
+            const paginationContainer = document.querySelector('.pagination-container');
+            if (paginationContainer) {
+                if (temJogos) {
+                    paginationContainer.classList.add('visible');
+                } else {
+                    paginationContainer.classList.remove('visible');
+                }
+            }
+        });
+        
+        this.salvarEstadoNoLocal();
+    } catch (error) {
+        console.error('Erro ao aplicar filtros:', error);
+    } finally {
+        this.setLoading(false);
+    }
+});
+}
+
+getSelectedGenresCount(): number {
+  return Object.values(this.selectedGenres).filter(selected => selected).length;
+}
+toggleAllGenres() {
+  const newState = !this.allGenresSelected;
+  const state = this.getCurrentPaginationState();
+  
+  // Reset do estado da paginação
+  state.currentPage = 1;
+  this.currentPage = 1;
+  state.consecutiveIncomplete = 0;
+  state.lastIncomplete = false;
+  state.hasMorePages = true;
+
+  this.genres.forEach(genre => this.selectedGenres[genre] = newState);
+
+  // Se estiver desativando todos os gêneros, verifica se tem jogos sem gênero
+  if (!newState) {
+    if (this.includeNoGenre) {
+        // Se jogos sem gênero está ativo, mostra apenas eles
+        this.showNoGenresMessage = false;
+        
+        // Ativar o loading aqui explicitamente
+        this.setLoading(true);
+        
+        // Aplicar filtros em um Promise para garantir que o loading seja visível
+        Promise.resolve().then(async () => {
+            try {
+                if (this.isSearchMode) {
+                    await this.applySearchFilters(true);
+                } else {
+                    await this.applyFilters(true);
+                }
+                
+                // Atualizar a visibilidade da paginação
+                requestAnimationFrame(() => {
+                    const paginationElement = document.querySelector('.pagination-container');
+                    if (paginationElement) {
+                        if (this.isSearchMode ? this.filteredSearchResults.length > 0 : this.filteredGames.length > 0) {
+                            paginationElement.classList.add('visible');
+                        } else {
+                            paginationElement.classList.remove('visible');
+                        }
+                    }
+                });
+            } finally {
+                this.setLoading(false);
+            }
+        });
+    } else {
+          // Se não há jogos sem gênero selecionado, mostra mensagem
+          if (this.isSearchMode) {
+              this.filteredSearchResults = [];
+          } else {
+              this.filteredGames = [];
+          }
+          this.showNoGenresMessage = true;
+          
+          requestAnimationFrame(() => {
+              this.updateVisiblePages();
+              const paginationElement = document.querySelector('.pagination-container');
+              if (paginationElement) {
+                  paginationElement.classList.remove('visible');
+              }
+          });
+      }
+      
+      this.salvarEstadoNoLocal();
+      return;
+  }
+  
+  // Se estiver ativando todos os gêneros
+  this.showNoGenresMessage = false;
+  
+  // Verifica se já temos jogos suficientes antes de mostrar loading
+  const source = this.isSearchMode ? this.searchResults : this.games;
+  const filtered = this.filterByGenres([...source]); // Aplica o filtro de gêneros primeiro
+  const jogosNecessarios = state.itemsPerPage;
+
+  if (filtered.length >= jogosNecessarios) {
+      // Se já temos jogos suficientes, aplica os filtros sem loading
+      if (this.isSearchMode) {
+          this.filteredSearchResults = this.filterByRating(filtered);
+          this.filteredSearchResults = this.sortGames(this.filteredSearchResults);
+      } else {
+          this.filteredGames = this.filterByRating(filtered);
+          this.filteredGames = this.sortGames(this.filteredGames);
+      }
+
+      requestAnimationFrame(() => {
+          this.updateVisiblePages();
+          const paginationElement = document.querySelector('.pagination-container');
+          if (paginationElement) {
+              paginationElement.classList.add('visible');
+          }
+      });
+      
+      this.salvarEstadoNoLocal();
+      return;
   }
 
-  updateAllSelected() {
-    const selectedGenresList = Object.keys(this.selectedGenres).filter(genre => this.selectedGenres[genre]);
-    this.showNoGenresMessage = selectedGenresList.length === 0;
-    
-    if (this.isSearchMode) {
-      this.applySearchFilters(true);
-    } else {
-      this.applyFilters(true);
-    }
+  // Se não temos jogos suficientes, mostra loading
+  this.setLoading(true);
+  Promise.resolve().then(async () => {
+      try {
+          if (this.isSearchMode) {
+              await this.applySearchFilters(true);
+          } else {
+              await this.applyFilters(true);
+          }
+          
+          requestAnimationFrame(() => {
+              const paginationElement = document.querySelector('.pagination-container');
+              if (paginationElement) {
+                  paginationElement.classList.add('visible');
+              }
+          });
+          
+          this.salvarEstadoNoLocal();
+      } catch (error) {
+          console.error('Erro ao aplicar filtros:', error);
+      } finally {
+          this.setLoading(false);
+      }
+  });
+}
+selectSingleGenre(genre: string) {
+  // Desativa todos os gêneros primeiro
+  Object.keys(this.selectedGenres).forEach(g => {
+      this.selectedGenres[g] = false;
+  });
+  this.includeNoGenre = false;
+
+  // Ativa apenas o gênero selecionado
+  if (this.genres.includes(genre)) {
+      this.selectedGenres[genre] = true;
   }
+
+  // Reset da paginação
+  this.currentPage = 1;
+  
+  // Aplica os filtros
+  if (this.isSearchMode) {
+      this.applySearchFilters(true);
+  } else {
+      this.applyFilters(true);
+  }
+
+  // Atualiza a UI
+  this.showNoGenresMessage = false;
+  this.updateVisiblePages();
+}
+
+toggleNoGenreOnly() {
+  // Desativa todos os gêneros
+  Object.keys(this.selectedGenres).forEach(genre => {
+      this.selectedGenres[genre] = false;
+  });
+  
+  // Ativa apenas a opção de jogos sem gênero
+  this.includeNoGenre = true;
+  
+  // Reset da paginação
+  this.currentPage = 1;
+  
+  // Mostrar loading explicitamente
+  this.setLoading(true);
+  
+  // Aplicar filtros dentro de uma Promise para garantir que o loading seja visível
+  Promise.resolve().then(async () => {
+      try {
+          if (this.isSearchMode) {
+              await this.applySearchFilters(true);
+          } else {
+              await this.applyFilters(true);
+          }
+          
+          // Atualiza a UI
+          this.showNoGenresMessage = false;
+          this.updateVisiblePages();
+          
+          // Garantir visibilidade da paginação para mostrar resultados
+          requestAnimationFrame(() => {
+              const paginationElement = document.querySelector('.pagination-container');
+              if (paginationElement && (this.isSearchMode ? this.filteredSearchResults.length > 0 : this.filteredGames.length > 0)) {
+                  paginationElement.classList.add('visible');
+              }
+          });
+      } finally {
+          this.setLoading(false);
+      }
+  });
+}
+
+updateAllSelected() {
+  const selectedGenresList = Object.keys(this.selectedGenres).filter(genre => this.selectedGenres[genre]);
+  this.showNoGenresMessage = selectedGenresList.length === 0;
+  
+  // Mantém a paginação visível durante o loading
+  const paginationElement = document.querySelector('.pagination-container');
+  if (paginationElement) {
+      paginationElement.classList.add('visible');
+  }
+
+  this.setLoading(true);
+
+  setTimeout(async () => {
+      try {
+          if (this.isSearchMode) {
+              await this.applySearchFilters(true);
+          } else {
+              await this.applyFilters(true);
+          }
+      } finally {
+          // Garante que a paginação permaneça visível após o filtro
+          requestAnimationFrame(() => {
+              const paginationElement = document.querySelector('.pagination-container');
+              if (paginationElement) {
+                  paginationElement.classList.add('visible');
+              }
+          });
+      }
+  }, 100);
+}
 
   /* ==============================================
      11. PAGINAÇÃO
   ============================================== */
+
   get pagedGames() {
     const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+
+    if (this.isSearchMode && this.loading && this.filteredSearchResults.length === 0) {
+        return [];
+    }
+    
     const startIndex = (this.currentPage - 1) * this.itemsPerPage;
     const endIndex = startIndex + this.itemsPerPage;
     
-    // Se ainda está carregando, ou não tem jogos suficientes e ainda podem ser carregados
-    const temMaisFonteDeJogos = this.isSearchMode ? this.searchHasMore : this.temMaisJogos;
+    // Se estamos tentando acessar uma página além do disponível atualmente
+    if (startIndex >= source.length && source.length > 0) {
+        // Só ativamos o loading se temos mais jogos possíveis
+        if (this.temMaisJogos && !this.loading && !this.carregandoMais) {
+            this.setLoading(true);
+            // Tentamos carregar mais jogos primeiro
+            setTimeout(() => {
+                this.carregarMaisJogos().then(() => {
+                    // Verifica novamente após carregar mais jogos
+                    if (startIndex >= this.filteredGames.length) {
+                        // Se ainda não temos jogos suficientes, ajustamos para última página válida
+                        const lastValidPage = Math.ceil(this.filteredGames.length / this.itemsPerPage);
+                        if (this.currentPage > lastValidPage && lastValidPage > 0) {
+                            this.currentPage = lastValidPage;
+                        }
+                        this.setLoading(false);
+                    }
+                });
+            }, 0);
+        }
+        
+        // Enquanto carrega, mostramos a última página válida
+        const lastValidPage = Math.max(1, Math.ceil(source.length / this.itemsPerPage));
+        const lastPageStartIndex = (lastValidPage - 1) * this.itemsPerPage;
+        return source.slice(lastPageStartIndex, lastPageStartIndex + this.itemsPerPage);
+    }
     
-    if (this.loading || (source.length < endIndex && temMaisFonteDeJogos)) {
-      // Mantém o loading se:
-      // 1. Ainda está carregando
-      // 2. Não tem 16 jogos e ainda pode carregar mais
-      return [];
+    // Temos conteúdo para esta página, então podemos desativar o loading
+    // MODIFICAÇÃO: Não desativamos o loading aqui se estamos no modo de busca
+    if (this.loading && !this.carregandoMais && endIndex <= source.length && !this.isSearchMode) {
+        // Verificamos se não estamos na última página ou se não temos mais jogos
+        const eUltimaPagina = this.currentPage === Math.ceil(source.length / this.itemsPerPage);
+        if (!eUltimaPagina || !this.temMaisJogos) {
+            // Desativamos o loading com um pequeno delay para evitar flickering
+            setTimeout(() => this.setLoading(false), 50);
+        }
     }
     
     return source.slice(startIndex, endIndex);
-  }
+}
+
+ private lastConfirmedPage: number | null = null;
     
-  get totalPages() {
-    const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
-    const calculatedPages = Math.ceil(source.length / this.itemsPerPage);
-    
-    if ((this.temMaisJogos || this.carregandoMais) && !this.isSearchMode) {
-      return Math.max(calculatedPages, this.currentPage + 1);
-    }
-    
-    if (this.currentPage > calculatedPages) {
-      return this.currentPage;
-    }
-    
-    return calculatedPages > 0 ? calculatedPages : 1;
+ get totalPages() {
+  const state = this.getCurrentPaginationState();
+  const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+  const calculatedPages = Math.ceil(source.length / state.itemsPerPage);
+  
+  const hasMoreContent = this.isSearchMode ? this.searchHasMore : this.temMaisJogos;
+  if (!hasMoreContent) {
+      return Math.max(1, calculatedPages);
   }
 
-  private updateVisiblePages() {
-    const total = Math.max(this.totalPages, this.currentPage);
-    const current = this.currentPage;
-    const range = 1;
-    let pages: (number | string)[] = [];
+  if (this.loading || this.carregandoMais) {
+      return Math.max(calculatedPages, this.currentPage);
+  }
+
+  const itemsOnLastPage = source.length % state.itemsPerPage;
+  if (itemsOnLastPage === 0 && source.length > 0) {
+      return calculatedPages + 1;
+  }
+
+  return Math.max(1, calculatedPages);
+}
+
+private eliminarDuplicatas() {
+  // Uso de Map para preservar a ordem de inserção
+  const jogosUnicos = new Map();
   
-    pages.push(1);
+  // Adiciona jogos ao Map usando ID como chave
+  this.games.forEach(game => {
+      jogosUnicos.set(game.id, game);
+  });
   
-    let start = Math.max(2, current - range);
-    let end = Math.min(total - 1, current + range);
+  // Converte o Map de volta para array
+  this.games = Array.from(jogosUnicos.values());
   
-    if (start > 2) pages.push('...');
-    for (let i = start; i <= end; i++) pages.push(i);
-    if (end < total - 1) pages.push('...');
-    if (total > 1) pages.push(total);
+  // Reaplica os filtros para garantir o estado correto
+  this.applyFilters(false);
+}
+
+private updateVisiblePages() {
+  const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+  const temJogos = source.length > 0;
   
-    if (!pages.includes(current)) {
-      pages = [...pages, current].sort((a, b) => {
-        if (typeof a === 'string') return 1;
-        if (typeof b === 'string') return -1;
-        return a - b;
-      });
+  // Nova condição para verificar explicitamente se há resultados
+  const hasAnyResults = this.isSearchMode ? 
+    this.filteredSearchResults.length > 0 : 
+    this.filteredGames.length > 0;
+
+  let hasMoreResults = false;
+  
+  if (this.isSearchMode && this.searchTerm) {
+      const termNormalizado = this.searchTerm.trim().toLowerCase();
+      const termState = this.getSearchTermState(termNormalizado);
+      hasMoreResults = termState.hasMore;
+  } else {
+      hasMoreResults = this.temMaisJogos;
+  }
+
+  // Atualizado para considerar resultados reais
+  const shouldShow = (hasAnyResults || this.loading || this.carregandoMais) && 
+                   (hasMoreResults || this.currentPage > 1 || hasAnyResults);
+
+  // Atualização imediata para evitar atrasos visuais
+  this.shouldShowPagination = shouldShow && hasAnyResults;
+  
+  // Se não houver jogos mas estamos carregando, ainda mostramos paginação
+  if (!temJogos && (this.loading || this.carregandoMais)) {
+      this.pagesToShow = [this.currentPage]; // Mostra a página atual
+      return;
+  }
+  
+  // Se realmente não há jogos e não estamos carregando, mostra apenas página 1
+  if (!temJogos && !this.loading && !this.carregandoMais) {
+      this.pagesToShow = [1];
+      return;
+  }
+
+  const total = Math.max(this.totalPages, this.currentPage);
+  const current = this.currentPage;
+  const range = 1;
+  let pages: (number | string)[] = [];
+
+  pages.push(1);
+
+  let start = Math.max(2, current - range);
+  let end = Math.min(total - 1, current + range);
+
+  if (start > 2) pages.push('...');
+  for (let i = start; i <= end; i++) pages.push(i);
+  if (end < total - 1) pages.push('...');
+  if (total > 1) pages.push(total);
+
+  if (!pages.includes(current)) {
+    pages = [...pages, current].sort((a, b) => {
+      if (typeof a === 'string') return 1;
+      if (typeof b === 'string') return -1;
+      return a - b;
+    });
+  }
+
+  this.pagesToShow = [...new Set(pages)];
+  
+  // MODIFICADO: Usar o estado específico do termo atual para controlar a visibilidade da setinha
+  if (this.isSearchMode && this.searchTerm) {
+    const termNormalizado = this.searchTerm.trim().toLowerCase();
+    const termState = this.getSearchTermState(termNormalizado);
+    
+    // Desabilitar a setinha apenas quando estamos na última página E não há mais resultados para ESTE termo específico
+    this.disableNextArrow = this.currentPage === total && !termState.hasMore;
+  } else {
+    // Para o modo normal (não-busca), usar a lógica original
+    this.disableNextArrow = this.currentPage === total && !this.temMaisJogos;
+  }
+  }
+
+  private async executarMudancaPagina(page: number) {
+    const state = this.getCurrentPaginationState();
+    if (page === this.currentPage) return;
+    // Se estamos indo para a última página e já sabemos que é a última
+    if (!this.temMaisJogos && page === this.totalPages) {
+        this.transitioning = true;
+        document.querySelector('.games-grid')?.classList.remove('loaded');
+        
+        // Atualiza a página sem tentar carregar mais
+        state.currentPage = page;
+        this.currentPage = page;
+        this.updateVisiblePages();
+        await new Promise(resolve => setTimeout(resolve, 50));
+        requestAnimationFrame(() => {
+            document.querySelector('.games-grid')?.classList.add('loaded');
+            this.transitioning = false;
+        });
+        
+        this.salvarEstadoNoLocal();
+        return;
     }
-  
-    this.pagesToShow = [...new Set(pages)];
+    state.currentPage = page;
+    this.currentPage = page;
+    this.updateVisiblePages();
+
+    const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+    const startIndex = (page - 1) * state.itemsPerPage;
+    const endIndex = startIndex + state.itemsPerPage;
+
+    this.transitioning = true;
+    document.querySelector('.games-grid')?.classList.remove('loaded');
+
+    // Se já temos os jogos necessários
+    if (startIndex < source.length && 
+        source.slice(startIndex, endIndex).length === state.itemsPerPage) {
+        
+        await new Promise(resolve => setTimeout(resolve, 50));
+        
+        requestAnimationFrame(() => {
+            document.querySelector('.games-grid')?.classList.add('loaded');
+            this.transitioning = false;
+        });
+        
+        this.salvarEstadoNoLocal();
+        return;
+    }
+
+    // Se precisamos carregar mais jogos
+    this.setLoading(true);
+
+    try {
+        const jogosNecessarios = page * state.itemsPerPage;
+        
+        if (this.isSearchMode) {
+            await this.loadSearchContent(jogosNecessarios);
+        } else {
+            await this.loadNormalContent(jogosNecessarios);
+        }
+
+        this.updatePaginationState(state);
+        
+        await new Promise(resolve => setTimeout(resolve, 50));
+        requestAnimationFrame(() => {
+            document.querySelector('.games-grid')?.classList.add('loaded');
+        });
+        
+        this.salvarEstadoNoLocal();
+    } catch (error) {
+        console.error('Erro ao mudar de página:', error);
+        this.updatePaginationState(state);
+    } finally {
+        this.transitioning = false;
+        this.setLoading(false);
+    }
   }
 
   async changePage(page: number | any) {
-    if (typeof page !== 'number' || page < 1 || this.loading) return;
+    if (typeof page !== 'number' || 
+      page < 1 || 
+      page > this.totalPages ||  
+      this.loading || 
+      this.transitioning) {
+      return;
+  }
+
+    // Se já estiver no topo, executa imediatamente
+    if (window.scrollY === 0) {
+        await this.executarMudancaPagina(page);
+        return;
+    }
+
+    // Se não estiver no topo, faz o scroll suave
+    window.scrollTo({ 
+        top: 0, 
+        behavior: 'auto' 
+    });
+
+    // Espera até que o scroll chegue ao topo
+    await new Promise<void>(resolve => {
+        let scrollCheckInterval = setInterval(() => {
+            if (window.scrollY === 0) {
+                clearInterval(scrollCheckInterval);
+                resolve();
+            }
+        }, 10);
+
+        // Timeout de segurança
+        setTimeout(() => {
+            clearInterval(scrollCheckInterval);
+            resolve();
+        }, 800);
+    });
+
+    // Executa a mudança de página após o scroll
+    await this.executarMudancaPagina(page);
+  }
+
+  private updatePaginationState(state: PaginationState) {
+    const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+    const calculatedPages = Math.ceil(source.length / state.itemsPerPage);
     
-    // Preparar para a mudança de página
-    this.currentPage = page;
+    state.totalPages = state.lastIncomplete ? 
+        calculatedPages : 
+        Math.max(calculatedPages, state.currentPage + (state.hasMorePages ? 1 : 0));
+    
     this.updateVisiblePages();
+  }
+
+  private async loadSearchContent(jogosNecessarios: number): Promise<void> {
+    const state = this.getCurrentPaginationState();
+    let tentativas = 0;
     
-    this.loading = true;
-    
-    try {
-      const jogosNecessarios = page * this.itemsPerPage;
-      const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
-      
-      // Verificar se precisamos carregar mais conteúdo
-      if (source.length < jogosNecessarios) {
-        if (this.isSearchMode) {
-          // Lógica de carregamento para modo de busca
-          let tentativas = 0;
-          const MAX_TENTATIVAS = 3;
-          
-          while (tentativas < MAX_TENTATIVAS && this.searchHasMore) {
-            const jogosAntesDeCarregar = this.filteredSearchResults.length;
-            
-            await this.carregarMaisResultadosBusca();
-            await this.applySearchFilters(false);
-              
-            if (this.filteredSearchResults.length > jogosAntesDeCarregar || 
-              this.filteredSearchResults.length >= jogosNecessarios) {
+    while (tentativas < state.maxAttempts && this.searchHasMore) {
+        const jogosAntesDeCarregar = this.filteredSearchResults.length;
+        
+        // Verifica se já temos jogos suficientes
+        if (jogosAntesDeCarregar >= jogosNecessarios) {
             break;
-          }
-            tentativas++;
-          }
-        } else {
-          // Lógica de carregamento para modo normal
-          let tentativas = 0;
-          const MAX_TENTATIVAS = this.genreFilterMode === 'exclusive' ? 6 : 3;
-          
-          while (tentativas < MAX_TENTATIVAS) {
-            const jogosAntesDeCarregar = this.filteredGames.length;
-            
-            if (!this.temMaisJogos && tentativas === 0) {
-              this.apiPage++;
-              this.temMaisJogos = true;
-            }
-            
-            await this.carregarMaisJogos();
-            await this.applyFilters(false);
-            
-            if (this.filteredGames.length > jogosAntesDeCarregar || 
-              this.filteredGames.length >= jogosNecessarios) {
-            break;
-            }
-            
-            tentativas++;
-            if (tentativas < MAX_TENTATIVAS) {
-              const delay = this.genreFilterMode === 'exclusive' ? 2000 : 1500;
-              await new Promise(resolve => setTimeout(resolve, delay));
-            }
-          }
         }
-      }
-      
-      // Ajustar página atual baseado nos dados disponíveis
-      const sourceAtual = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
-      const paginasDisponiveis = Math.ceil(sourceAtual.length / this.itemsPerPage);
-      this.currentPage = Math.min(page, Math.max(1, paginasDisponiveis));
-      
-      this.updateVisiblePages();
-      this.salvarEstadoNoLocal();
-    } finally {
-      // Garantir que o loading seja desativado
-      this.loading = false;
+        
+        await this.carregarMaisResultadosBusca();
+        await this.applySearchFilters(false);
+        
+        // Aguarda processamento dos dados
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        // Verifica se obtivemos novos jogos
+        const novosJogosObtidos = this.filteredSearchResults.length > jogosAntesDeCarregar;
+        
+        // Atualiza o estado da paginação
+        if (!novosJogosObtidos) {
+            state.consecutiveIncomplete++;
+            if (state.consecutiveIncomplete >= state.maxAttempts) {
+                state.hasMorePages = false;
+                state.lastIncomplete = true;
+                break;
+            }
+        } else {
+            state.consecutiveIncomplete = 0;
+        }
+        
+        tentativas++;
+        
+        // Se ainda não temos jogos suficientes mas temos mais páginas, continua tentando
+        if (this.filteredSearchResults.length < jogosNecessarios && 
+            tentativas < state.maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 500));
+        }
+    }
+    
+    // Atualiza o estado final
+    state.loadedUntilPage = Math.ceil(this.filteredSearchResults.length / state.itemsPerPage);
+  }
+
+  private async loadNormalContent(jogosNecessarios: number): Promise<void> {
+    const state = this.getCurrentPaginationState();
+    let tentativas = 0;
+    
+    while (tentativas < state.maxAttempts) {
+        const jogosAntesDeCarregar = this.filteredGames.length;
+        
+        if (!this.temMaisJogos && tentativas === 0) {
+            this.apiPage++;
+            this.temMaisJogos = true;
+        }
+        
+        await this.carregarMaisJogos();
+        await this.applyFilters(false);
+        
+        await new Promise(resolve => setTimeout(resolve, 100));
+        
+        if (this.filteredGames.length > jogosAntesDeCarregar || 
+            this.filteredGames.length >= jogosNecessarios) {
+            break;
+        }
+        
+        tentativas++;
+        if (tentativas < state.maxAttempts) {
+            await new Promise(resolve => setTimeout(resolve, 
+                this.getCurrentMode() === 'exclusive' ? 1000 : 500));
+        }
     }
   }
   
@@ -1152,5 +2392,26 @@ private sortGames(games: any[]): any[] {
   ============================================== */
   detalhesJogo(gameId: number) {
     this.router.navigate(['/detalhes', gameId]);
+  }
+
+  /* ==============================================
+     14. SCROLL PAGINAÇÃO
+  ============================================== */
+  @HostListener('window:scroll', ['$event'])
+  onScroll() {
+    const footer = document.querySelector('app-footer');
+    const paginationContainer = document.querySelector('.pagination-container');
+    
+    if (footer && paginationContainer) {
+      const footerTop = footer.getBoundingClientRect().top;
+      const windowHeight = window.innerHeight;
+      
+      // Se o footer estiver próximo da área visível
+      if (footerTop <= windowHeight) { 
+        paginationContainer.classList.add('above-footer');
+      } else {
+        paginationContainer.classList.remove('above-footer');
+      }
+    }
   }
 }

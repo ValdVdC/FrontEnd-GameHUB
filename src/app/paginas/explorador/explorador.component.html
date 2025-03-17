@@ -34,7 +34,7 @@
               (click)="isMobile && toggleDropdown('genre')">
                 <!-- Controle do Dropdown de Gêneros -->
                 <div class="dropdown-control" [class.expanded]="activeDropdown === 'genre'">
-                  <div class="form-check select-all" (click)="$event.stopPropagation()" (change)="toggleAllGenres()">
+                  <div class="form-check select-all" [class.disabled]="genreFilterMode === 'exclusive'" (click)="$event.stopPropagation()" (change)="toggleAllGenres()">
                     <input 
                       type="checkbox" 
                       id="select-all-genres"
@@ -57,14 +57,30 @@
                       [class.open]="activeDropdown === 'genre'" 
                       [class.closed]="activeDropdown !== 'genre'">
                     <div class="genre-checkboxes">
-                      <div *ngFor="let genre of genres" 
-                          class="form-check option-genre"
-                          (click)="toggleGenre(genre)">
-                        <input 
-                          type="checkbox" 
-                          [id]="'genre-' + genre" 
-                          [value]="genre" 
+                      <div class="form-check option-genre special-genre"
+                      (click)="!isGenreSelectionDisabled && toggleNoGenre()"
+                      [class.disabled]="isGenreSelectionDisabled">
+                     <input type="checkbox" 
+                            id="genre-none" 
+                            [checked]="includeNoGenre"
+                            [disabled]="isGenreSelectionDisabled"
+                            class="form-check-input">
+                        <label for="genre-none" class="form-check-label">
+                            <span class="custom-checkbox"></span>
+                            <span class="label-text">
+                                <i class="bi bi-dash-circle"></i> Jogos sem gênero
+                            </span>
+                        </label>
+                    </div>
+                    
+                    <div *ngFor="let genre of genres" 
+                    class="form-check option-genre"
+                    [class.disabled]="isNoGenreMode"
+                    (click)="!isNoGenreMode && toggleGenre(genre)">
+                   <input type="checkbox" 
+                          [id]="'genre-' + genre"
                           [checked]="selectedGenres[genre]"
+                          [disabled]="isNoGenreMode"
                           class="form-check-input">
                         <label [for]="'genre-' + genre" class="form-check-label">
                           <span class="custom-checkbox"></span>
@@ -171,104 +187,115 @@
         <!-- ============================================== 
              3. INDICADOR DE CARREGAMENTO 
              ============================================== -->
-        <div class="loading-container" *ngIf="loading || preLoading">
-          <div class="loading-content">
-            <div class="neon-spinner">
-              <div class="spinner-core"></div>
-              <div class="spinner-aura"></div>
-            </div>
-            <div class="loading-text">
-              <span class="loading-dots">Buscando jogos</span>
-            </div>
-          </div>
-        </div>
-    
+             <div class="loading-container" *ngIf="loading || preLoading">
+              <div class="loading-content">
+                    <div class="neon-spinner">
+                        <div class="spinner-core"></div>
+                        <div class="spinner-aura"></div>
+                    </div>
+                    
+                    <div class="loading-text">
+                        <span class="loading-dots" [class.long-loading]="isLongLoading">
+                            {{ isLongLoading ? 'Ainda buscando jogos' : 'Buscando jogos' }}
+                        </span>
+                    </div>
+                
+                    <!-- Botão de cancelar separado -->
+                    <button *ngIf="showCancelButton" 
+                            class="btn-cancel-loading"
+                            (click)="cancelLoading()">
+                        <i class="bi bi-x-circle"></i>
+                        <span>Cancelar e voltar</span>
+                    </button>
+                
+                    <!-- Container de ajuda separado -->
+                    <div *ngIf="isLongLoading" class="help-container">
+                        <i class="bi bi-question-circle help-icon" 
+                          [class.active]="isLongLoading"></i>
+                        <div class="help-tooltip">
+                            <p>Às vezes alguns filtros deixam a busca mais demorada.</p>
+                            <p>Se preferir, você pode cancelar e voltar ao explorador padrão.</p>
+                        </div>
+                    </div>
+                </div>
+              </div>
         <!-- ============================================== 
-             4. GRID DE JOGOS (MODO NORMAL) 
+             4. GRID DE JOGOS 
              ============================================== -->
-        <div class="games-grid" *ngIf="!loading && !isSearchMode">
+             <div class="games-grid" 
+             [class.loaded]="!loading && !transitioning"
+             *ngIf="hasSelectedGenres && pagedGames.length > 0">
           <div class="row">
             <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
-              <div class="game-card" (mousedown)="detalhesJogo(game.id)">
+              <div class="game-card" (click)="detalhesJogo(game.id)">
                 <div class="game-card-image">
-                  <img [src]="game.cover_url||'assets/default-cover.png'" [alt]="game.name" class="img-fluid" loading="lazy">
+                    <img [src]="game.cover_url || 'assets/default-cover.png'" 
+                         [alt]="game.name" 
+                         class="img-fluid" 
+                         loading="lazy">
                 </div>
                 <div class="game-card-content">
-                  <h3>{{game.name}}</h3>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span class="genre-badge">{{game.genres.join(', ')}}</span>
-                    <div class="rating" *ngIf="game.total_rating">
-                      <i class="bi bi-star-fill"></i>
-                      {{game.total_rating | formatarNota}}
+                    <div class="title-container">
+                        <h3>{{game.name}}</h3>
                     </div>
-                  </div>
+                    <div class="title-divider"></div>
+                    <div class="details-container">
+                      <div class="genre-badges">
+                          <ng-container *ngIf="game.genres && game.genres.length > 0; else noGenre">
+                              <span *ngFor="let genre of game.genres" 
+                                    class="genre-badge"
+                                    (click)="$event.stopPropagation(); selectSingleGenre(genre)">
+                                  {{genre}}
+                              </span>
+                          </ng-container>
+                          <ng-template #noGenre>
+                              <span class="genre-badge no-genre"
+                                    (click)="$event.stopPropagation(); toggleNoGenreOnly()">
+                                  <i class="bi bi-dash-circle"></i> Sem gênero
+                              </span>
+                          </ng-template>
+                      </div>
+                      <div class="rating" [class.no-rating]="!game.total_rating">
+                          <i class="bi" [ngClass]="game.total_rating ? 'bi-star-fill' : 'bi-dash-circle'"></i>
+                          <span>{{game.total_rating ? (game.total_rating | formatarNota) : 'S/N'}}</span>
+                      </div>
+                   </div>
                 </div>
               </div>
             </div>
           </div>
         </div>
-    
         <!-- ============================================== 
-             5. GRID DE JOGOS (MODO BUSCA) 
+             5. SISTEMA DE PAGINAÇÃO 
              ============================================== -->
-        <div class="games-grid" *ngIf="!loading && isSearchMode">
-          <div class="row">
-            <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
-              <div class="game-card" (mousedown)="detalhesJogo(game.id)">
-                <div class="game-card-image">
-                  <img [src]="game.cover_url"
-                  [alt]="game.name" 
-                  class="img-fluid" 
-                  loading="lazy">
-                </div>
-                <div class="game-card-content">
-                  <h3>{{game.name}}</h3>
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span class="genre-badge">{{game.genres.join(', ')}}</span>
-                    <div class="rating" *ngIf="game.total_rating">
-                      <i class="bi bi-star-fill"></i>
-                      {{game.total_rating | formatarNota}}
-                    </div>
-                  </div>
-                </div>
-              </div>
+          <div class="pagination-container" 
+             *ngIf="shouldShowPagination"
+             [class.visible]="shouldShowPagination">
+             <button class="btn btn-outline-neon" 
+             [disabled]="currentPage <= 1"
+             (click)="changePage(currentPage - 1)">
+              <i class="bi bi-chevron-left"></i>
+             </button>
+    
+             <div class="page-numbers">
+              <button *ngFor="let page of pagesToShow"
+                      class="btn btn-outline-neon"
+                      [class.active]="page === currentPage"
+                      [disabled]="page === '...' || (page !== '...' && +page > totalPages)"
+                      (click)="page !== '...' && changePage(+page)">
+                  {{ page }}
+              </button>
             </div>
-          </div>
-        </div>
-    
-        <!-- ============================================== 
-             6. SISTEMA DE PAGINAÇÃO 
-             ============================================== -->
-        <div class="pagination-container" 
-             *ngIf="hasSelectedGenres && (filteredGames.length > itemsPerPage || temMaisJogos)">
-          <button 
-            class="btn btn-outline-neon" 
-            [disabled]="currentPage === 1 || loading"
-            (click)="changePage(currentPage - 1)">
-            <i class="bi bi-chevron-left"></i>
-          </button>
-    
-          <div class="page-numbers">
-            <button 
-              *ngFor="let page of pagesToShow"
-              class="btn btn-outline-neon"
-              [class.active]="page === currentPage"
-              [disabled]="page === '...' || loading"
-              (click)="page !== '...' && changePage(page)">
-              {{ page }}
-            </button>
-          </div>
           
-          <button 
-            class="btn btn-outline-neon" 
-            [disabled]="(!temMaisJogos && currentPage === totalPages) || loading"
-            (click)="changePage(currentPage + 1)">
-            <i class="bi bi-chevron-right"></i>
-          </button>
+            <button class="btn btn-outline-neon" 
+                    [disabled]="((+currentPage) >= (+totalPages) && !temMaisJogos)||disableNextArrow"
+                    (click)="changePage(+currentPage + 1)">
+                <i class="bi bi-chevron-right"></i>
+            </button>
         </div>
     
         <!-- ============================================== 
-             7. MENSAGENS DE ESTADO VAZIO 
+             6. MENSAGENS DE ESTADO VAZIO 
              ============================================== -->
         <div class="no-results" *ngIf="genresLoaded && !loading && 
         ((isSearchMode && filteredSearchResults.length === 0) || 
