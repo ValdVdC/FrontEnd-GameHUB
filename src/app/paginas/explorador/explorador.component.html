@@ -297,27 +297,73 @@
         <!-- ============================================== 
              6. MENSAGENS DE ESTADO VAZIO 
              ============================================== -->
-        <div class="no-results" *ngIf="genresLoaded && !loading && 
-        ((isSearchMode && filteredSearchResults.length === 0) || 
-        (!isSearchMode && filteredGames.length === 0))">
-          <i class="bi bi-emoji-frown" *ngIf="hasSelectedGenres"></i>
-          <i class="bi bi-filter-circle" *ngIf="!hasSelectedGenres"></i>
-          
-          <p *ngIf="!hasSelectedGenres">
-            Selecione pelo menos um gênero para visualizar os jogos
-          </p>
-          
-          <p *ngIf="hasSelectedGenres && !isSearchMode">
-            Nenhum jogo encontrado com os filtros selecionados
-          </p>
-          
-          <p *ngIf="hasSelectedGenres && isSearchMode">
-            Nenhum resultado de busca para "{{searchTerm}}" com os filtros selecionados
-          </p>
-          
-          <button class="btn btn-neon" (click)="toggleAllGenres()">
-            Selecionar Todos
-          </button>
-        </div>
+             <div class="no-results" *ngIf="genresLoaded && !loading && 
+             ((isSearchMode && filteredSearchResults.length === 0) || 
+             (!isSearchMode && filteredGames.length === 0))">
+             
+             <!-- Ícones diferentes para diferentes casos -->
+             <i class="bi bi-emoji-frown" *ngIf="hasSelectedGenres && 
+                 ((isSearchMode && searchResults.length > 0) || 
+                 (!isSearchMode && games.length > 0))"></i>
+             <i class="bi bi-filter-circle" *ngIf="!hasSelectedGenres"></i>
+             <i class="bi bi-search" *ngIf="isSearchMode && searchResults.length === 0"></i>
+             
+             <!-- Caso 1: Nenhum gênero selecionado -->
+             <div *ngIf="!hasSelectedGenres" class="no-results-message">
+                 <h4>Filtros limitando resultados</h4>
+                 <p>Selecione pelo menos um gênero ou "Jogos sem gênero" para visualizar os jogos</p>
+                 <button class="btn btn-neon" (click)="toggleAllGenres()">
+                     Selecionar Todos os Gêneros
+                 </button>
+             </div>
+             
+             <!-- Caso 2: Modo normal (sem busca) mas sem jogos com os filtros atuais -->
+             <div *ngIf="hasSelectedGenres && !isSearchMode && games.length > 0" class="no-results-message">
+                 <h4>Nenhum jogo encontrado</h4>
+                 <p>Os filtros atuais estão limitando muito os resultados. Tente:</p>
+                 <ul class="suggestions-list">
+                     <li>Selecionar mais gêneros</li>
+                     <li>Ajustar a avaliação mínima</li>
+                     <li>Mudar o modo de filtragem (inclusivo/exclusivo)</li>
+                 </ul>
+                 <div class="action-buttons">
+                     <button class="btn btn-neon" (click)="resetFilters()">
+                         Redefinir Filtros
+                     </button>
+                 </div>
+             </div>
+             
+             <!-- Caso 3: Modo de busca, mas sem resultados para o termo -->
+             <div *ngIf="isSearchMode && searchResults.length === 0" class="no-results-message">
+                 <h4>Nenhum resultado encontrado</h4>
+                 <p>Não encontramos jogos com o termo "<strong>{{searchTerm}}</strong>"</p>
+                 <ul class="suggestions-list">
+                     <li>Verifique se o nome do jogo está correto</li>
+                     <li>Tente usar termos mais genéricos</li>
+                     <li>Busque por parte do nome do jogo</li>
+                 </ul>
+                 <div class="action-buttons">
+                     <button class="btn btn-neon" (click)="clearSearch()">
+                         Limpar Busca
+                     </button>
+                 </div>
+             </div>
+             
+             <!-- Caso 4: Resultados de busca existem, mas foram filtrados -->
+             <div *ngIf="hasSelectedGenres && isSearchMode && searchResults.length > 0" class="no-results-message">
+                 <h4>Resultados filtrados</h4>
+                 <p>Encontramos {{searchResults.length}} jogos para "<strong>{{searchTerm}}</strong>", mas nenhum corresponde aos filtros atuais.</p>
+                 <ul class="suggestions-list">
+                     <li>Tente selecionar mais gêneros</li>
+                     <li>Ajuste a classificação mínima ({{selectedRating ? getRatingLabel(selectedRating) : 'Atualmente sem mínimo'}})</li>
+                     <li>Os jogos podem não ter os gêneros selecionados atribuídos</li>
+                 </ul>
+                 <div class="action-buttons">
+                     <button class="btn btn-neon" (click)="resetFilters()">
+                         Redefinir Filtros
+                     </button>
+                 </div>
+             </div>
+          </div>
       </div>
     </section>

@@ -175,6 +175,7 @@ export class ExploradorComponent {
   searchHasMore: boolean = true;
   filteredSearchResults: Game[] = [];
   isSearchMode: boolean = false;
+  private lastSearchTerm: string = '';
   private searchTermsState: Map<string, SearchTermState> = new Map();
   private getSearchTermState(term: string): SearchTermState {
     if (!this.searchTermsState.has(term)) {
@@ -396,10 +397,10 @@ private getCurrentMode(): keyof PaginationStates {
   /* ==============================================
      4. PROPRIEDADES DE CONTROLE RXJS
   ============================================== */
-  private searchSubject = new Subject<string>();
   private destroy$ = new Subject<void>();
   private intervalSalvarEstado: any;
   private genreSubscription: Subscription = new Subscription();
+  private searchSubject = new Subject<string>();
 
   /* ==============================================
      5. CONSTRUTOR E MÉTODOS DE CICLO DE VIDA
@@ -411,10 +412,19 @@ private getCurrentMode(): keyof PaginationStates {
     private changeDetectorRef: ChangeDetectorRef
   ) {
     this.searchSubject.pipe(
-      debounceTime(1000),
-      distinctUntilChanged(),
+      debounceTime(450),
       takeUntil(this.destroy$)
     ).subscribe(term => {
+      // Se já estamos no modo busca e o termo é o mesmo que o anterior, ignoramos
+      if (this.isSearchMode && term === this.lastSearchTerm) {
+        console.log('Ignorando busca repetida:', term);
+        return;
+      }
+      
+      // Armazena o último termo buscado
+      this.lastSearchTerm = term;
+      
+      // Realiza a busca normalmente
       this.performSearch(term);
     });
   }
@@ -876,13 +886,32 @@ limparEstadoERecarregar() {
   ============================================== */
 
   onSearch() {
-  
-      if (this.searchTerm?.trim() !== '') {
-        this.searchSubject.next(this.searchTerm);
-      } else {
-        this.searchSubject.next('');
+    const termo = this.searchTerm?.trim();
+    
+    if (!termo) {
+      // Tratamento especial para busca vazia
+      if (this.isSearchMode) {
+        // Desativar loading imediatamente
+        this.loading = false;
+        this.preLoading = false;
+        
+        // Processar imediatamente sem usar o observable
+        this.performSearch('');
+        
+        // Reseta o lastSearchTerm ao sair do modo busca
+        this.lastSearchTerm = '';
       }
+    } else {
+      // Se estamos voltando do explorador, resetamos o lastSearchTerm
+      // para garantir que a busca será processada
+      if (!this.isSearchMode) {
+        this.lastSearchTerm = '';
+      }
+      
+      // Envia o termo para o subject
+      this.searchSubject.next(termo);
     }
+  }
   
   private completelyResetPagination(mode: 'search' | 'normal') {
     if (mode === 'normal') {
@@ -919,215 +948,222 @@ limparEstadoERecarregar() {
     this.updateVisiblePages();
   }
  
-private async performSearch(term: string) {
-  // Imediatamente ativar loading no início da função
-  this.setLoading(true);
-  
-  // Definir um tempo mínimo para o loading ficar visível
-  const tempoMinimoLoading = 1000; // 1 segundo
-  const inicioLoading = Date.now();
-  
-  // Se o termo está vazio, voltar para o modo normal
-  if (!term?.trim()) {
+  private async performSearch(term: string) {
+    if (!term?.trim()) {
       if (this.isSearchMode) {
-          // Salvamos explicitamente o estado da busca atual
-          this.paginationStates.search.currentPage = this.currentPage;
-          this.paginationStates.search.hasMorePages = this.searchHasMore;
-          this.paginationStates.search.consecutiveIncomplete = 0;
+        // Desativar loading imediatamente para este caso específico
+        this.loading = false;
+        this.preLoading = false;
+        
+        // Salvar estado da busca
+        this.paginationStates.search.currentPage = this.currentPage;
+        this.paginationStates.search.hasMorePages = this.searchHasMore;
+        
+        // Restaurar estado da paginação normal
+        const normalState = this.paginationStates.normal;
+        this.currentPage = normalState.currentPage;
+        this.temMaisJogos = normalState.hasMorePages;
+        
+        // Usar requestAnimationFrame para garantir atualização imediata da UI
+        requestAnimationFrame(() => {
+          // Limpar resultados da busca
+          this.searchResults = [];
+          this.filteredSearchResults = [];
           
-          // Restaurar o estado da paginação normal
-          const normalState = this.paginationStates.normal;
-          this.currentPage = normalState.currentPage;
-          this.temMaisJogos = normalState.hasMorePages;
-          
-          // Definir modo normal sem recarregar dados
+          // Mudar para modo normal antes da atualização visual
           this.isSearchMode = false;
           
-          // Apenas atualizar a UI sem fazer requisições
+          // Atualizar UI
           this.updateVisiblePages();
           
-          // Garantir tempo mínimo de loading para feedback visual
-          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-      } else {
-          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+          // Forçar uma atualização adicional
+          this.changeDetectorRef.detectChanges();
+        });
       }
       return;
-  }
-  
-  const termNormalizado = term.trim().toLowerCase();
-  
-  // Verificar se já temos um estado salvo para este termo
-  const termState = this.getSearchTermState(termNormalizado);
-  
-  // MUDANÇA IMPORTANTE: Definir imediatamente o modo de busca para esconder os jogos normais
-  this.isSearchMode = true;
-  
-  // Verificar se temos resultados em cache para este termo exato
-  if (termState.totalResults > 0 && termState.apiPageReached > 0) {
-      // Recuperar explicitamente os resultados do termo atual
-      // Esta é a parte que precisamos modificar para garantir que os resultados sejam atualizados
-      
-      // Limpar resultados antigos e carregar os novos
-      this.searchResults = [];
-      this.filteredSearchResults = [];
-      
-      // Aqui vamos buscar os resultados na API novamente
-      try {
-          // Fazer a requisição de busca
-          const response = await lastValueFrom(this.apiService.buscarJogoPorNome(termNormalizado, 1));
-          
-          if (response && response.games && response.games.length > 0) {
-              // Processar os resultados
-              this.searchResults = response.games.map((game: Game) => ({
-                  ...game,
-                  genres: game.genres || []
-              }));
-              
-              // Atualizar flag de mais resultados com base na resposta da API
-              this.searchHasMore = response.pagination.hasMore;
-              
-              // Atualizar o estado da paginação de busca
-              this.paginationStates.search.hasMorePages = this.searchHasMore;
-              this.paginationStates.search.currentPage = 1;
-              this.paginationStates.search.consecutiveIncomplete = 0;
-              this.currentPage = 1;
-              
-              // Atualizar o estado para este termo de busca
-              this.updateSearchTermState(termNormalizado, {
-                  hasMore: this.searchHasMore,
-                  totalResults: this.searchResults.length,
-                  apiPageReached: 1, // Começamos na página 1
-                  lastPage: 1
-              });
-              
-              // Aplicar filtros sem resetar a página (já está na página 1)
-              await this.applySearchFilters(true);
-              
-              // Atualizar a UI após todas as operações
-              this.updateVisiblePages();
-              
-              // Salvar o estado
-              this.salvarEstadoNoLocal();
-              
-              // Garantir tempo mínimo de loading para feedback visual
-              this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-          } else {
-              // Tratar caso de nenhum resultado
-              this.searchResults = [];
-              this.searchHasMore = false;
-              this.filteredSearchResults = [];
-              this.paginationStates.search.hasMorePages = false;
-              
-              // Armazenar que este termo não tem resultados
-              this.updateSearchTermState(termNormalizado, {
-                  hasMore: false,
-                  totalResults: 0,
-                  apiPageReached: 1,
-                  lastPage: 1
-              });
-              
-              this.updateVisiblePages();
-              
-              // Garantir tempo mínimo de loading para feedback visual
-              this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-          }
-      } catch (error) {
-          console.error('Erro na busca:', error);
-          this.searchResults = [];
-          this.searchHasMore = false;
-          this.filteredSearchResults = [];
-          this.paginationStates.search.hasMorePages = false;
-          this.updateVisiblePages();
-          
-          // Garantir tempo mínimo de loading para feedback visual
-          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-      }
-      
-      return;
-  }
-  
-  // Limpar resultados anteriores ANTES de buscar novos
-  this.searchResults = [];
-  this.filteredSearchResults = [];
-  
-  // Reset completo do estado de paginação da busca
-  this.completelyResetPagination('search');
-  
-  // Atualizar UI imediatamente para mostrar loading sem jogos antigos
-  this.updateVisiblePages();
-  
-  try {
-      // Fazer a requisição de busca
-      const response = await lastValueFrom(this.apiService.buscarJogoPorNome(termNormalizado, this.searchApiPage));
-      
-      if (response && response.games && response.games.length > 0) {
-          // Processar os resultados
-          this.searchResults = response.games.map((game: Game) => ({
-              ...game,
-              genres: game.genres || []
-          }));
-          
-          // Atualizar flag de mais resultados com base na resposta da API
-          this.searchHasMore = response.pagination.hasMore;
-          
-          // Atualizar o estado da paginação de busca
-          this.paginationStates.search.hasMorePages = this.searchHasMore;
-          this.paginationStates.search.currentPage = 1;
-          this.paginationStates.search.consecutiveIncomplete = 0;
-          
-          // Armazenar o estado para este termo de busca
-          this.updateSearchTermState(termNormalizado, {
-              hasMore: this.searchHasMore,
-              totalResults: this.searchResults.length,
-              apiPageReached: this.searchApiPage,
-              lastPage: 1
-          });
-          
-          // Aplicar filtros sem resetar a página (já está na página 1)
-          await this.applySearchFilters(true);
-          
-          // Atualizar a UI após todas as operações
-          this.updateVisiblePages();
-          
-          // Salvar o estado
-          this.salvarEstadoNoLocal();
-          
-          // Garantir tempo mínimo de loading para feedback visual
-          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-      } else {
-          // Tratar caso de nenhum resultado
-          this.searchResults = [];
-          this.searchHasMore = false;
-          this.filteredSearchResults = [];
-          this.paginationStates.search.hasMorePages = false;
-          
-          // Armazenar que este termo não tem resultados
-          this.updateSearchTermState(termNormalizado, {
-              hasMore: false,
-              totalResults: 0,
-              apiPageReached: this.searchApiPage,
-              lastPage: 1
-          });
-          
-          this.updateVisiblePages();
-          
-          // Garantir tempo mínimo de loading para feedback visual
-          this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-      }
-  } catch (error) {
-      console.error('Erro na busca:', error);
-      this.searchResults = [];
-      this.searchHasMore = false;
-      this.filteredSearchResults = [];
-      this.paginationStates.search.hasMorePages = false;
-      this.updateVisiblePages();
-      
-      // Garantir tempo mínimo de loading para feedback visual
-      this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
-  }
-}
+    }
+    
+    this.setLoading(true);
 
-disableNextArrow: boolean = false;
+    this.isSearchMode = true;
+
+    const tempoMinimoLoading = 1000; // 1 segundo
+    const inicioLoading = Date.now();
+    
+    const termNormalizado = term.trim().toLowerCase();
+    
+    // Verificar se já temos um estado salvo para este termo
+    const termState = this.getSearchTermState(termNormalizado);
+    
+    // MUDANÇA IMPORTANTE: Definir imediatamente o modo de busca para esconder os jogos normais
+    this.isSearchMode = true;
+    
+    // Verificar se temos resultados em cache para este termo exato
+    if (termState.totalResults > 0 && termState.apiPageReached > 0) {
+        // Recuperar explicitamente os resultados do termo atual
+        // Esta é a parte que precisamos modificar para garantir que os resultados sejam atualizados
+        
+        // Limpar resultados antigos e carregar os novos
+        this.searchResults = [];
+        this.filteredSearchResults = [];
+        
+        // Aqui vamos buscar os resultados na API novamente
+        try {
+            // Fazer a requisição de busca
+            const response = await lastValueFrom(this.apiService.buscarJogoPorNome(termNormalizado, 1));
+            
+            if (response && response.games && response.games.length > 0) {
+                // Processar os resultados
+                this.searchResults = response.games.map((game: Game) => ({
+                    ...game,
+                    genres: game.genres || []
+                }));
+                
+                // Atualizar flag de mais resultados com base na resposta da API
+                this.searchHasMore = response.pagination.hasMore;
+                
+                // Atualizar o estado da paginação de busca
+                this.paginationStates.search.hasMorePages = this.searchHasMore;
+                this.paginationStates.search.currentPage = 1;
+                this.paginationStates.search.consecutiveIncomplete = 0;
+                this.currentPage = 1;
+                
+                // Atualizar o estado para este termo de busca
+                this.updateSearchTermState(termNormalizado, {
+                    hasMore: this.searchHasMore,
+                    totalResults: this.searchResults.length,
+                    apiPageReached: 1, // Começamos na página 1
+                    lastPage: 1
+                });
+                
+                // Aplicar filtros sem resetar a página (já está na página 1)
+                await this.applySearchFilters(true);
+                
+                // Atualizar a UI após todas as operações
+                this.updateVisiblePages();
+                
+                // Salvar o estado
+                this.salvarEstadoNoLocal();
+                
+                // Garantir tempo mínimo de loading para feedback visual
+                this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+            } else {
+                // Tratar caso de nenhum resultado
+                this.searchResults = [];
+                this.searchHasMore = false;
+                this.filteredSearchResults = [];
+                this.paginationStates.search.hasMorePages = false;
+                
+                // Armazenar que este termo não tem resultados
+                this.updateSearchTermState(termNormalizado, {
+                    hasMore: false,
+                    totalResults: 0,
+                    apiPageReached: 1,
+                    lastPage: 1
+                });
+                
+                this.updateVisiblePages();
+                
+                // Garantir tempo mínimo de loading para feedback visual
+                this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+            }
+        } catch (error) {
+            console.error('Erro na busca:', error);
+            this.searchResults = [];
+            this.searchHasMore = false;
+            this.filteredSearchResults = [];
+            this.paginationStates.search.hasMorePages = false;
+            this.updateVisiblePages();
+            
+            // Garantir tempo mínimo de loading para feedback visual
+            this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+        }
+        
+        return;
+    }
+    
+    // Limpar resultados anteriores ANTES de buscar novos
+    this.searchResults = [];
+    this.filteredSearchResults = [];
+    
+    // Reset completo do estado de paginação da busca
+    this.completelyResetPagination('search');
+    
+    // Atualizar UI imediatamente para mostrar loading sem jogos antigos
+    this.updateVisiblePages();
+    
+    try {
+        // Fazer a requisição de busca
+        const response = await lastValueFrom(this.apiService.buscarJogoPorNome(termNormalizado, this.searchApiPage));
+        
+        if (response && response.games && response.games.length > 0) {
+            // Processar os resultados
+            this.searchResults = response.games.map((game: Game) => ({
+                ...game,
+                genres: game.genres || []
+            }));
+            
+            // Atualizar flag de mais resultados com base na resposta da API
+            this.searchHasMore = response.pagination.hasMore;
+            
+            // Atualizar o estado da paginação de busca
+            this.paginationStates.search.hasMorePages = this.searchHasMore;
+            this.paginationStates.search.currentPage = 1;
+            this.paginationStates.search.consecutiveIncomplete = 0;
+            
+            // Armazenar o estado para este termo de busca
+            this.updateSearchTermState(termNormalizado, {
+                hasMore: this.searchHasMore,
+                totalResults: this.searchResults.length,
+                apiPageReached: this.searchApiPage,
+                lastPage: 1
+            });
+            
+            // Aplicar filtros sem resetar a página (já está na página 1)
+            await this.applySearchFilters(true);
+            
+            // Atualizar a UI após todas as operações
+            this.updateVisiblePages();
+            
+            // Salvar o estado
+            this.salvarEstadoNoLocal();
+            
+            // Garantir tempo mínimo de loading para feedback visual
+            this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+        } else {
+            // Tratar caso de nenhum resultado
+            this.searchResults = [];
+            this.searchHasMore = false;
+            this.filteredSearchResults = [];
+            this.paginationStates.search.hasMorePages = false;
+            
+            // Armazenar que este termo não tem resultados
+            this.updateSearchTermState(termNormalizado, {
+                hasMore: false,
+                totalResults: 0,
+                apiPageReached: this.searchApiPage,
+                lastPage: 1
+            });
+            
+            this.updateVisiblePages();
+            
+            // Garantir tempo mínimo de loading para feedback visual
+            this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+        }
+    } catch (error) {
+        console.error('Erro na busca:', error);
+        this.searchResults = [];
+        this.searchHasMore = false;
+        this.filteredSearchResults = [];
+        this.paginationStates.search.hasMorePages = false;
+        this.updateVisiblePages();
+        
+        // Garantir tempo mínimo de loading para feedback visual
+        this.garantirTempoMinimoLoading(inicioLoading, tempoMinimoLoading);
+    }
+  }
+
+  disableNextArrow: boolean = false;
 
   private garantirTempoMinimoLoading(inicioLoading: number, tempoMinimo: number): Promise<void> {
     const tempoDecorrido = Date.now() - inicioLoading;
@@ -1383,24 +1419,28 @@ disableNextArrow: boolean = false;
 
 private async applySearchFilters(resetPage: boolean = true) {
   try {
-    // Remova a chamada para ensureLoadingCompletes() aqui, pois já estamos
-    // garantindo o tempo mínimo no performSearch
-    
     if (resetPage) {
       this.currentPage = 1;
     }
 
     // Verificar se temos resultados de busca, senão realizar a busca novamente
     if (this.searchResults.length === 0 && this.searchTerm) {
-      // O performSearch vai gerenciar o estado de loading
       return; 
     }
 
-    if (!this.hasSelectedGenres) {
+    // Verificação importante para lidar corretamente com a opção "jogos sem gênero"
+    const selectedGenresList = Object.entries(this.selectedGenres || {})
+      .filter(([_, selected]) => selected)
+      .map(([genre]) => genre);
+
+    // Se não há gêneros selecionados E não incluímos jogos sem gênero
+    if (selectedGenresList.length === 0 && !this.includeNoGenre) {
       this.filteredSearchResults = [];
+      this.showNoGenresMessage = true;
       this.updateVisiblePages();
-      // Não desative o loading aqui - deixe para o performSearch fazer isso
       return;
+    } else {
+      this.showNoGenresMessage = false;
     }
 
     let filtered = this.filterByGenres([...this.searchResults]);
@@ -1572,12 +1612,34 @@ private sortGames(games: any[]): any[] {
     state.lastIncomplete = false;
     state.hasMorePages = true;
     
-    this.applyFilters(true);
+    // Determinar se devemos mostrar a mensagem de "sem gêneros selecionados"
+    const temGenerosAtivos = Object.values(this.selectedGenres).some(selected => selected);
+    
+    if (!temGenerosAtivos && !this.includeNoGenre) {
+        this.showNoGenresMessage = true;
+        
+        // Limpar os resultados filtrados dependendo do modo
+        if (this.isSearchMode) {
+            this.filteredSearchResults = [];
+        } else {
+            this.filteredGames = [];
+        }
+        
+        this.updateVisiblePages();
+        return;
+    }
+    
+    // Aplicar os filtros apropriados com base no modo atual
+    if (this.isSearchMode) {
+        this.applySearchFilters(true);
+    } else {
+        this.applyFilters(true);
+    }
+    
     this.updateVisiblePages();
 }
 
 toggleGenre(genre: string) {
-  
     if (this.genreFilterMode === 'exclusive') {
       const generosSelecionados = Object.values(this.selectedGenres).filter(selected => selected).length;
       const estadoAnterior = this.selectedGenres[genre];
@@ -2413,5 +2475,35 @@ private updateVisiblePages() {
         paginationContainer.classList.remove('above-footer');
       }
     }
+  }
+
+  /* ==============================================
+     15. No-RESULTS
+  ============================================== */
+
+  resetFilters() {
+    // Redefine todos os filtros para seus valores padrão
+    this.selectedRating = '';
+    this.sortBy = 'relevance';
+    this.genreFilterMode = 'inclusive';
+    
+    // Seleciona todos os gêneros
+    this.toggleAllGenres();
+    this.toggleNoGenre();
+
+    // Aplica os filtros
+    if (this.isSearchMode) {
+      this.applySearchFilters(true);
+    } else {
+      this.applyFilters(true);
+    }
+  }
+  
+  clearSearch() {
+    this.searchTerm = '';
+    this.isSearchMode = false;
+    this.searchResults = [];
+    this.filteredSearchResults = [];
+    this.updateVisiblePages();
   }
 }

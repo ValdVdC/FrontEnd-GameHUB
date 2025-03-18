@@ -965,33 +965,68 @@ h3 {
 ============================================== */
 .no-results {
   text-align: center;
-  padding: 40px;
+  padding: 2rem;
   min-height: 300px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   align-items: center;
   background: rgba(22, 33, 62, 0.4);
-  border-radius: 15px;
+  border-radius: 12px;
   border: 1px solid rgba(116, 239, 255, 0.2);
   max-width: 600px;
   animation: fadeIn 0.3s ease-out;
-  margin: 0 auto;
+  margin: 3rem auto;
+  box-shadow: 0 4px 20px rgba(116, 239, 255, 0.3);
 }
 
 .no-results i {
   font-size: 3.5rem;
   color: #74efff;
-  margin-bottom: 30px;
-  opacity: 0.8;
+  margin-bottom: 1rem;
 }
 
 .no-results p {
-  font-size: 1.2rem;
-  margin-bottom: 30px;
+  font-size: 1.1rem;
+  margin-bottom: 1rem;
   color: rgba(255, 255, 255, 0.9);
   line-height: 1.6;
 }
+
+.no-results-message h4 {
+  font-size: 1.5rem;
+  margin-bottom: 0.75rem;
+  color: var(--accent-color);
+}
+
+.suggestions-list {
+  text-align: left;
+  margin: 1rem 0;
+  list-style-type: none;
+  padding-left: 0;
+}
+
+.suggestions-list li {
+  margin-bottom: 0.5rem;
+  position: relative;
+  padding-left: 1.5rem;
+}
+
+.suggestions-list li:before {
+  content: '•';
+  position: absolute;
+  left: 0.5rem;
+  color: var(--accent-color);
+}
+
+.action-buttons {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
 .no-results .btn-neon {
   padding: 12px 30px;
   font-size: 1.1rem;
@@ -1267,59 +1302,67 @@ h3 {
     margin-bottom: 15px;
   }
   
-.genre-checkboxes-dropdown.closed {
-  max-height: 0 !important;
-  opacity: 0 !important;
-  visibility: hidden !important;
-  overflow: hidden !important;
-  pointer-events: none !important; 
-  transition: all 0.3s ease-out;
-}
-.filter-mode-sidebar.closed {
-  opacity: 0 !important;
-  visibility: hidden !important;
-  transition: all 0.3s ease-out;
-}
-.filter-mode-sidebar {
-  position: absolute; /* Remove o posicionamento absoluto */
-  left: 0;
-  right: 0;
-  width: 50%; /* Define uma largura menor */
-  margin: 10px auto; /* Centraliza a sidebar */
-  border-radius: 8px; /* Arredonda os cantos */
-  border: 1px solid rgba(116, 239, 255, 0.7); /* Mantém a borda */
-  border-top: none;
-  flex-direction: row; /* Organiza os elementos na horizontal */
-  justify-content: center; /* Centraliza os elementos */
-  padding: 10px; /* Adiciona um pouco de padding */
-  margin-top: 284px; /* Adiciona margem superior para separar do dropdown */
-  opacity: 1; /* Garante que a sidebar seja visível */
-  pointer-events: auto; /* Permite interação */
-  z-index: 1; /* Define um z-index adequado */
-}
+  .genre-checkboxes-dropdown.closed {
+    max-height: 0 !important;
+    opacity: 0 !important;
+    visibility: hidden !important;
+    overflow: hidden !important;
+    pointer-events: none !important; 
+    transition: all 0.3s ease-out;
+  }
+  .filter-mode-sidebar.closed {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    transition: all 0.3s ease-out;
+  }
+  .filter-mode-sidebar {
+    position: absolute; /* Remove o posicionamento absoluto */
+    left: 0;
+    right: 0;
+    width: 50%; /* Define uma largura menor */
+    margin: 10px auto; /* Centraliza a sidebar */
+    border-radius: 8px; /* Arredonda os cantos */
+    border: 1px solid rgba(116, 239, 255, 0.7); /* Mantém a borda */
+    border-top: none;
+    flex-direction: row; /* Organiza os elementos na horizontal */
+    justify-content: center; /* Centraliza os elementos */
+    padding: 10px; /* Adiciona um pouco de padding */
+    margin-top: 284px; /* Adiciona margem superior para separar do dropdown */
+    opacity: 1; /* Garante que a sidebar seja visível */
+    pointer-events: auto; /* Permite interação */
+    z-index: 1; /* Define um z-index adequado */
+  }
 
-/* Aumenta um pouco o tamanho da área de toque para mobile */
-.mode-option label {
-  width: 38px;
-  height: 38px;
-}
+  /* Aumenta um pouco o tamanho da área de toque para mobile */
+  .mode-option label {
+    width: 38px;
+    height: 38px;
+  }
 
-/* Ajusta o tooltip para aparecer abaixo em vez de ao lado */
-.mode-tooltip {
-  left: 50%;
-  top: 100%;
-  transform: translateX(-50%);
-  margin-top: 5px;
-}
+  /* Ajusta o tooltip para aparecer abaixo em vez de ao lado */
+  .mode-tooltip {
+    left: 50%;
+    top: 100%;
+    transform: translateX(-50%);
+    margin-top: 5px;
+  }
 
-/* Garante que o dropdown de checkboxes tem margem inferior suficiente */
-.genre-checkboxes-dropdown.open {
-  padding-bottom: 60px; /* Espaço para a barra inferior */
-}
-.pagination-container{
-  width: 90%;
-  background: rgba(22, 33, 62, 0.901);
-}
+  /* Garante que o dropdown de checkboxes tem margem inferior suficiente */
+  .genre-checkboxes-dropdown.open {
+    padding-bottom: 60px; /* Espaço para a barra inferior */
+  }
+  .pagination-container{
+    width: 90%;
+    background: rgba(22, 33, 62, 0.901);
+  }
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .no-results {
+    padding: 1.5rem;
+    margin: 2rem auto;
+  }
 }
 @media (min-width: 769px) and (max-width: 1399px) {
   .col-md-4 {
