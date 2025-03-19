@@ -73,19 +73,19 @@
                         </label>
                     </div>
                     
-                    <div *ngFor="let genre of genres" 
-                    class="form-check option-genre"
-                    [class.disabled]="isNoGenreMode"
-                    (click)="!isNoGenreMode && toggleGenre(genre)">
-                   <input type="checkbox" 
-                          [id]="'genre-' + genre"
-                          [checked]="selectedGenres[genre]"
-                          [disabled]="isNoGenreMode"
-                          class="form-check-input">
-                        <label [for]="'genre-' + genre" class="form-check-label">
-                          <span class="custom-checkbox"></span>
-                          <span class="label-text">{{genre}}</span>
-                        </label>
+                      <div *ngFor="let genre of genres" 
+                          class="form-check option-genre"
+                          [class.disabled]="isNoGenreMode || (genreFilterMode === 'exclusive' && !selectedGenres[genre] && getSelectedGenresCount() >= 6)"
+                          (click)="(!isNoGenreMode && !(genreFilterMode === 'exclusive' && !selectedGenres[genre] && getSelectedGenresCount() >= 6)) && toggleGenre(genre)">
+                          <input type="checkbox" 
+                                [id]="'genre-' + genre"
+                                [checked]="selectedGenres[genre]"
+                                [disabled]="isNoGenreMode || (genreFilterMode === 'exclusive' && !selectedGenres[genre] && getSelectedGenresCount() >= 6)"
+                                class="form-check-input">
+                          <label [for]="'genre-' + genre" class="form-check-label">
+                            <span class="custom-checkbox"></span>
+                            <span class="label-text">{{genre}}</span>
+                          </label>
                       </div>
                     </div>
                   </div>
@@ -222,9 +222,9 @@
         <!-- ============================================== 
              4. GRID DE JOGOS 
              ============================================== -->
-             <div class="games-grid" 
-             [class.loaded]="!loading && !transitioning"
-             *ngIf="hasSelectedGenres && pagedGames.length > 0">
+        <div class="games-grid" 
+        [class.loaded]="!loading && !transitioning"
+        *ngIf="hasSelectedGenres && pagedGames.length > 0">
           <div class="row">
             <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
               <div class="game-card" (click)="detalhesJogo(game.id)">
@@ -309,14 +309,24 @@
              <i class="bi bi-search" *ngIf="isSearchMode && searchResults.length === 0"></i>
              
              <!-- Caso 1: Nenhum gênero selecionado -->
-             <div *ngIf="!hasSelectedGenres" class="no-results-message">
+             <div *ngIf="!hasSelectedGenres && genreFilterMode !='exclusive'" class="no-results-message">
                  <h4>Filtros limitando resultados</h4>
                  <p>Selecione pelo menos um gênero ou "Jogos sem gênero" para visualizar os jogos</p>
                  <button class="btn btn-neon" (click)="toggleAllGenres()">
                      Selecionar Todos os Gêneros
                  </button>
              </div>
-             
+             <!-- Caso 1.5: Nenhum gênero selecionado (Exclusivo - Dica) -->
+             <div *ngIf="!hasSelectedGenres && genreFilterMode == 'exclusive'" class="no-results-message">
+              <h4>Filtros limitando resultados</h4>
+              <p>Dicas para melhorar sua busca:</p>
+              <ul class="tips-list">
+                  <li>Selecione até 6 gêneros no modo exclusivo para encontrar jogos mais específicos</li>
+                  <li>A opção "Jogos sem gênero" desabilita a seleção de gêneros específicos e vice-versa</li>
+                  <li>No modo exclusivo, os jogos precisam ter todos os gêneros selecionados especificadamente</li>
+                  <li>Experimente alternar para o modo inclusivo para resultados mais abrangentes</li>
+              </ul>
+             </div>
              <!-- Caso 2: Modo normal (sem busca) mas sem jogos com os filtros atuais -->
              <div *ngIf="hasSelectedGenres && !isSearchMode && games.length > 0" class="no-results-message">
                  <h4>Nenhum jogo encontrado</h4>
