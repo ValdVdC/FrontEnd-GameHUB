@@ -127,6 +127,20 @@
                 {{game.total_rating|formatarNota}}
               </div>
             </div>
+            
+            <!-- NOVO: Card "Ver mais" para esta categoria -->
+            <div class="game-card-categories ver-mais-card" 
+                 (click)="navegarParaExploradorComGenero(category.value.genre)">
+              <div class="ver-mais-container">
+                <div class="ver-mais-icon">
+                  <i class="bi bi-arrow-right-circle"></i>
+                </div>
+                <div class="ver-mais-text">
+                  <h5>Ver mais jogos de</h5>
+                  <h4>{{category.value.genre}}</h4>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
