@@ -316,7 +316,18 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     this.scrollService.setActiveSection('');
     this.router.navigate(['/detalhes', gameId]);
   }
-
+  
+  navegarParaExploradorComGenero(genre: string | { name: string }) {
+    // Handle both string and object genres
+    const genreName = typeof genre === 'string' ? genre : genre.name;
+    
+    // Set the genre to navigate to
+    this.genreNavigationService.navigateToGenre(genreName);
+    
+    // Navigate to the explorer page
+    this.router.navigate(['/explorador']);
+  }
+  
   /* ==============================================
      8. GERENCIAMENTO DE OBSERVADORES DE SCROLL
   ============================================== */
@@ -380,15 +391,5 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     calcularSecaoMaisVisivel();
     
     this.observerInitialized = true;
-  }
-  navegarParaExploradorComGenero(genre: string | { name: string }) {
-    // Handle both string and object genres
-    const genreName = typeof genre === 'string' ? genre : genre.name;
-    
-    // Set the genre to navigate to
-    this.genreNavigationService.navigateToGenre(genreName);
-    
-    // Navigate to the explorer page
-    this.router.navigate(['/explorador']);
   }
 }

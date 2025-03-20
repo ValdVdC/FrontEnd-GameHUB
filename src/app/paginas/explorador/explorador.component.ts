@@ -434,20 +434,17 @@ private getCurrentMode(): keyof PaginationStates {
     this.setLoading(true);
     this.preLoading = true;
     
-    // Log adicional de depuração
-    console.log('Genres loaded:', this.genres);
-
     // Recuperar dados do localStorage
     const estadoRecuperado = this.recuperarEstadoDoLocal();
     
     // Carregar gêneros primeiro
     this.loadGenres().then(() => {
       console.log('Genres after loading:', this.genres);
-      console.log('Selected Genres:', this.selectedGenres);
-
+      
+      // Obter o gênero atual que foi passado da navegação
       const currentGenre = this.genreNavigationService.getCurrentGenre();
       console.log('Current Genre from Service:', currentGenre);
-
+      
       if (currentGenre) {
         console.log('Processando gênero navegado:', currentGenre);
         
@@ -456,47 +453,79 @@ private getCurrentMode(): keyof PaginationStates {
           this.selectedGenres[key] = false;
         });
         
-        // Verificação de correspondência de gênero (com tratamento de case-sensitivity)
+        // Desativar a opção de jogos sem gênero
+        this.includeNoGenre = false;
+        
+        // Verificação de correspondência de gênero com tratamento case-insensitive
         const matchedGenre = this.genres.find(
-          genre => genre.toLowerCase() === currentGenre.toLowerCase()
+          genre => genre.toLowerCase().trim() === currentGenre.toLowerCase().trim()
         );
         
         if (matchedGenre) {
+          // Se não estiver no topo, faz o scroll suave
+          window.scrollTo({ 
+            top: 0, 
+            behavior: 'auto' 
+          });
+
+          // Espera até que o scroll chegue ao topo
+          new Promise<void>(resolve => {
+              let scrollCheckInterval = setInterval(() => {
+                  if (window.scrollY === 0) {
+                      clearInterval(scrollCheckInterval);
+                      resolve();
+                  }
+              }, 10);
+
+              // Timeout de segurança
+              setTimeout(() => {
+                  clearInterval(scrollCheckInterval);
+                  resolve();
+              }, 800);
+          });
+
           console.log('Gênero correspondente encontrado:', matchedGenre);
           
           // Marcar apenas o gênero correspondente
           this.selectedGenres[matchedGenre] = true;
           
-          // Aplicar filtros
-          if (this.isSearchMode) {
-            this.applySearchFilters(true);
-          } else {
-            this.applyFilters(true);
-          }
+          // Forçar o modo de filtro inclusivo para gêneros navegados
+          this.genreFilterMode = 'inclusive';
           
-          // Limpar o gênero selecionado após processamento
-          this.genreNavigationService.clearSelectedGenre();
+          // Carregar jogos antes de aplicar filtros se necessário
+          if (this.games.length === 0) {
+            this.loadInitialGames().then(() => {
+              // Aplicar filtros após carregar jogos
+              this.applyFilters(true);
+              // Limpar o gênero selecionado após processamento completo
+              this.genreNavigationService.clearSelectedGenre();
+            });
+          } else {
+            // Aplicar filtros
+            this.applyFilters(true);
+            // Limpar o gênero selecionado após processamento completo
+            this.genreNavigationService.clearSelectedGenre();
+          }
         } else {
           console.warn('Nenhum gênero correspondente encontrado para:', currentGenre);
           console.warn('Gêneros disponíveis:', this.genres);
+          // Limpar o gênero selecionado se não for encontrado
+          this.genreNavigationService.clearSelectedGenre();
+          
+          // Carregar jogos normalmente
+          if (!estadoRecuperado || this.games.length === 0) {
+            this.loadInitialGames();
+          }
         }
-      }
-
-      // Carregar jogos (se necessário)
-      if (!estadoRecuperado || (this.games.length === 0 && !this.isSearchMode)) {
-        this.loadInitialGames();
-      } else if (this.isSearchMode && this.searchTerm && this.searchResults.length === 0) {
-        // Se estamos no modo de busca mas não temos resultados, faça a busca novamente
-        this.performSearch(this.searchTerm);
       } else {
-        // Se temos estado recuperado, atualizar a paginação
-        this.updateVisiblePages();
-        if (this.isSearchMode) {
-          this.applySearchFilters(false);
+        // Carregar jogos normalmente se não houver gênero selecionado
+        if (!estadoRecuperado || this.games.length === 0) {
+          this.loadInitialGames();
         } else {
+          this.updateVisiblePages();
           this.applyFilters(false);
+          this.setLoading(false);
         }
-        this.setLoading(false);
       }
     }).catch(error => {
       console.error('Erro ao carregar gêneros:', error);
@@ -508,25 +537,7 @@ private getCurrentMode(): keyof PaginationStates {
     
     // Salvar estado periodicamente
     this.intervalSalvarEstado = setInterval(() => this.salvarEstadoNoLocal(), 5000);
-    this.genreSubscription = this.genreNavigationService.selectedGenre$.subscribe(genre => {
-      if (genre) {
-        console.log('Navigated Genre:', genre); // Debug log
-  
-        Object.keys(this.selectedGenres).forEach(key => {
-          this.selectedGenres[key] = false;
-        });
-        
-        if (this.genres.includes(genre)) {
-          this.selectedGenres[genre] = true;
 
-          if (this.isSearchMode) {
-            this.applySearchFilters(true);
-          } else {
-            this.applyFilters(true);
-          }
-        }
-      }
-    });
   }
 
   ngOnDestroy() {
@@ -1542,11 +1553,11 @@ private async applySearchFilters(resetPage: boolean = true) {
     });
 }
   
-  private filterByRating(games: any[]): any[] {
-    if (!this.selectedRating) return games;
-    const minRating = parseInt(this.selectedRating);
-    return games.filter(game => game.total_rating >= minRating);
-  }
+private filterByRating(games: any[]): any[] {
+  if (!this.selectedRating) return games;
+  const minRating = parseInt(this.selectedRating);
+  return games.filter(game => game.total_rating >= minRating);
+}
   
 private sortGames(games: any[]): any[] {
   if (!games || games.length === 0) return [];
@@ -2254,7 +2265,7 @@ private updateVisiblePages() {
       this.loading || 
       this.transitioning) {
       return;
-  }
+      }
 
     // Se já estiver no topo, executa imediatamente
     if (window.scrollY === 0) {
