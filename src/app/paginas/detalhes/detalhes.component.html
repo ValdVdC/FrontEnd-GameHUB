@@ -1,74 +1,88 @@
 <section id="games" class="py-5">
-    <div class="container">
-      <div class="loading-container" *ngIf="jogoCarregando">
-        <p>Carregando...</p>
-        <div class="spinner"></div>
+  <div class="container">
+    <div class="loading-container" *ngIf="jogoCarregando">
+      <p>Carregando...</p>
+      <div class="spinner"></div>
+    </div>
+    <div class="row" *ngFor="let info of jogo">
+      <div class="col-md-4 mb-4">
+        <div class="game-card" id={{info.id}}>
+          <div class="game-card-image">
+            <img [src]="info.cover_url" [alt]="info.name" class="img-fluid">
+          </div>
+          <div class="game-card-name">
+            <h3>{{info.name}}</h3>
+          </div>
+          <div class="game-card-category">
+            <h5 class="genre-badge" *ngFor="let genre of info.genres"> {{genre}}</h5>
+          </div>
+          <div class="game-card-date_rating">                
+            <div class="date">
+              <i class="bi bi-calendar"></i>
+              {{info.release_date|date}}
+            </div>
+            <div class="rating">
+              <i class="bi bi-star-fill"></i>
+              {{info.total_rating|formatarNota}}
+            </div>
+          </div>
+          <div class="game-card-platform">
+            <div class="platform" *ngFor="let platformInfo of info.platforms_info">
+              <img [src]="platformInfo.logo_url" [alt]=platformInfo.name class="img-fluid platform-logo">
+              <span class="tooltip">{{platformInfo.name}}</span>
+            </div>
+          </div>
+        </div>
       </div>
-      <div class="row" *ngFor="let info of jogo">
-        <div class="col-md-4 mb-4">
-          <div class="game-card" id={{info.id}}>
-            <div class="game-card-image">
-              <img [src]="info.cover_url" [alt]="info.name" class="img-fluid">
-            </div>
-            <div class="game-card-name">
-              <h3>{{info.name}}</h3>
-            </div>
-            <div class="game-card-category">
-              <h5 class="genre-badge"  *ngFor="let genre of info.genres"> {{genre}}</h5>
-            </div>
-            <div class="game-card-date_rating">                
-              <div class="date">
-                <i class="bi bi-calendar"></i>
-                {{info.release_date|date}}
-              </div>
-              <div class="rating">
-                <i class="bi bi-star-fill"></i>
-                {{info.total_rating|formatarNota}}
-              </div>
-            </div>
-             <div class="game-card-platform">
-              <div class="platform" *ngFor="let platformInfo of info.platforms_info">
-                <img [src]="platformInfo.logo_url" [alt]=platformInfo.name class="img-fluid platform-logo">
-                <span class="tooltip">{{platformInfo.name}}</span>
-              </div>
-            </div> 
+      <div class="col">
+        <div class="game-card-details">
+          <div class="storyline" *ngIf="info.storyline">
+            <h3>Sumário</h3>
+            <p>{{info.storyline}}</p>
+          </div>
+          <div class="summary" *ngIf="info.summary">
+            <h4>Descrição</h4>
+            <p>{{info.summary}}</p>
           </div>
         </div>
-        <div class="col">
-          <div class="game-card-details">
-            <div class="storyline" *ngIf="info.storyline">
-              <h3>História</h3>
-              <p>{{info.storyline}}</p>
-            </div>
-            <div class="summary" *ngIf="info.summary">
-              <h4>Descrição</h4>
-              <p>{{info.summary}}</p>
-            </div>
-          </div>
-        </div>
-        <div class="videos" *ngIf="info.video_url?.length">
-          <h4>Vídeos</h4>
-          <ngb-carousel 
-            #carousel 
-            [interval]="0"
-            [showNavigationArrows]="true"
-            [showNavigationIndicators]="true"
-            [pauseOnHover]="true"
-            [wrap]="true">
-            <ng-template ngbSlide *ngFor="let video of info.video_url">
-              <div class="video-container">
-                <div class="video-item">
-                  <iframe 
-                    [src]="video | safeVideoUrl"
-                    frameborder="0"
-                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                    allowfullscreen>
-                  </iframe>
-                </div>
+      </div>
+      <div class="videos" *ngIf="info.video_url?.length">
+        <h4>Vídeos</h4>
+        <ngb-carousel
+          #carousel
+          [interval]="0"
+          [showNavigationArrows]="false"
+          [showNavigationIndicators]="false"
+          [pauseOnHover]="true"
+          [wrap]="true"
+          (slide)="onSlideChange($event)">
+          <ng-template ngbSlide *ngFor="let video of info.video_url; let i = index" id="ngb-slide-{{i}}">
+            <div class="video-container">
+              <div class="video-item">
+                <iframe
+                  [src]="video | safeVideoUrl"
+                  frameborder="0"
+                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                  allowfullscreen>
+                </iframe>
               </div>
-            </ng-template>
-          </ngb-carousel>
+            </div>
+          </ng-template>
+        </ngb-carousel>
+        
+        <!-- Miniaturas para navegação -->
+        <div class="video-thumbnails">
+          <div 
+            *ngFor="let thumbnail of videoThumbnails; let i = index" 
+            class="video-thumbnail" 
+            [class.active]="activeSlideId === 'ngb-slide-' + i"
+            (click)="selecionarVideo('ngb-slide-' + i)">
+            <img [src]="thumbnail" [alt]="'Miniatura do vídeo ' + (i+1)">
+            <div class="video-play-icon"></div>
+            <div class="video-number">{{i+1}}</div>
+          </div>
         </div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
