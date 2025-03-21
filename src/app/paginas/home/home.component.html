@@ -111,7 +111,7 @@
                  *ngFor="let game of category.value.games.slice(0,10)">
               <!-- Imagem do jogo -->
               <div class="img-container">
-                <img [src]="game.cover_url" alt="{{game.name}} Cover">
+                <img [src]="game.cover_url || 'assets/default-cover.png'" alt="{{game.name}} Cover">
               </div>
               
               <!-- Título do jogo -->

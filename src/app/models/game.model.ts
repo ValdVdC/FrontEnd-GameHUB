@@ -4,6 +4,7 @@ export interface Game {
     genres: string[];
     cover_url: string;
     total_rating?: number;
+    popularity_value?:number;
   }
   
   export interface ApiResponse {

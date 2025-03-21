@@ -8,7 +8,7 @@
       <div class="col-md-4 mb-4">
         <div class="game-card" id={{info.id}}>
           <div class="game-card-image">
-            <img [src]="info.cover_url" [alt]="info.name" class="img-fluid">
+            <img [src]="info.cover_url || 'assets/default-cover.png'" [alt]="info.name" class="img-fluid">
           </div>
           <div class="game-card-name">
             <h3>{{info.name}}</h3>

@@ -26,6 +26,7 @@ export class HeaderComponent implements OnInit, OnDestroy {
   carregandoResultados: boolean = false;
   semResultados: boolean = false;
   clickTimeout: any;
+  buscadorHabilitado: boolean = true;
   
   // ==============================================
   // 3. GERENCIAMENTO DE SUBSCRIPTIONS E RXJS
@@ -94,6 +95,12 @@ export class HeaderComponent implements OnInit, OnDestroy {
       filter(event => event instanceof NavigationEnd),
       takeUntil(this.destroy)
     ).subscribe((event: any) => {
+      // Verificar se estamos na página do explorador
+      const estaNaPaginaExplorador = event.url.includes('/explorador');
+      
+      // Desabilitar o buscador se estiver na página do explorador
+      this.buscadorHabilitado = !estaNaPaginaExplorador;
+      
       // Se não estivermos na página home, desative todos os links
       if (!event.url.includes('#') && event.url !== '/' && event.url !== '/home') {
         this.activeLink = '';
@@ -115,9 +122,30 @@ export class HeaderComponent implements OnInit, OnDestroy {
           this.semResultados = false;
           this.carregandoResultados = true;
           
-          await this.apiService.buscarJogoPorNome(busca).subscribe({
-            next: (results) => {
-              this.resultadosBusca = results;
+          this.apiService.buscarJogoPorNome(busca).subscribe({
+            next: (response) => {
+              // Verificar se a resposta tem a estrutura esperada
+              if (response && response.games) {
+                // Extrair os jogos do objeto de resposta
+                this.resultadosBusca = response.games.map((game:Game) => ({
+                  ...game,
+                  genres: game.genres || [] // Garantir que genres existe
+                }));
+              } else {
+                // Se a resposta for diretamente um array (formato antigo)
+                this.resultadosBusca = Array.isArray(response) ? response : [];
+              }
+              
+              // Ordenar os resultados pelo popularity_value (do maior para o menor)
+              this.resultadosBusca.sort((a, b) => {
+                // Se popularity_value estiver ausente, tratamos como 0
+                const popularityA = a.popularity_value || 0;
+                const popularityB = b.popularity_value || 0;
+                
+                // Ordenação decrescente (do maior para o menor valor)
+                return popularityB - popularityA;
+              });
+              
               this.carregandoResultados = false;
               this.semResultados = this.resultadosBusca.length === 0;
             },

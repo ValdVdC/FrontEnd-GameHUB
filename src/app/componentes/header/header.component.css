@@ -33,28 +33,40 @@
 /* ==============================================
    3. ESTILOS DO CAMPO DE BUSCA
 ============================================== */
-form {
+form.d-flex {
   position: relative;
   margin-left: auto;
-  margin-right: 2rem;
   min-width: 250px;
+  margin-right: 2rem;
 }
 
-input {
-  background-color: rgba(13, 17, 23, 0.95);
-  color: #e6eaee;
-  border: #74efff solid 2px;
+form.d-flex input {
+  background-color: rgba(22, 33, 62, 0.6);
+  color: #ffffff;
+  border: 2px solid rgba(116, 239, 255, 0.3);
+  border-radius: 10px;
+  padding: 8px 15px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  width: 100%;
 }
 
-input:focus {
-  background-color: rgba(13, 17, 23, 0.95);
-  color: #e6eaee;
-  border: #5dbfcc solid 3px;
+form.d-flex input:focus {
+  background-color: rgba(22, 33, 62, 0.8);
+  border: 2px solid rgba(116, 239, 255, 0.8);
+  box-shadow: 0 4px 15px rgba(116, 239, 255, 0.2);
+  outline: none;
 }
 
-::placeholder {
-  color: #74efff;
-  opacity: 0.2;
+form.d-flex input::placeholder {
+  color: rgba(116, 239, 255, 0.6);
+  opacity: 0.6;
+  font-size: 0.9rem;
+  transition: opacity 0.3s ease;
+}
+
+form.d-flex input:focus::placeholder {
+  opacity: 0.3;
 }
 
 /* ==============================================
@@ -67,47 +79,76 @@ input:focus {
   top: calc(100% + 10px);
   left: 50%;
   transform: translateX(-50%);
-  width: 300px;
+  width: 320px;
   max-height: 400px;
   overflow-y: auto;
-  background: #1a1a1a;
-  border: 1px solid #333;
-  border-radius: 4px;
+  background: linear-gradient(145deg, rgba(13, 19, 36, 0.95), rgba(15, 23, 42, 0.98));
+  border: 1px solid rgba(116, 239, 255, 0.1);
+  border-radius: 0px 0px 10px 10px;
   z-index: 1000;
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  padding: 5px;
+  backdrop-filter: blur(10px);
+  transform-origin: top center;
+  animation: fadeInResults 0.2s ease-out;
 }
+
 
 /* Estilização dos itens de jogo nos resultados */
 .game-item {
   display: flex;
   padding: 10px;
-  border-bottom: 1px solid #333;
+  border-bottom: 1px solid rgba(116, 239, 255, 0.1);
   cursor: pointer;
+  transition: all 0.2s ease;
+  border-radius: 8px;
+  margin: 3px 0;
+}
+
+.game-item:last-child {
+  border-bottom: none;
 }
 
 .game-item:hover {
-  background: #252525;
+  background: rgba(116, 239, 255, 0.1);
+  transform: translateX(3px);
 }
 
 .game-item img {
-  border: solid 2px transparent;
+  border: 2px solid rgba(116, 239, 255, 0.2);
   border-radius: 8px;
   width: 64px;
   height: 64px;
   object-fit: cover;
   margin-right: 10px;
+  transition: all 0.3s ease;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
-
+.game-item:hover img {
+  border-color: rgba(116, 239, 255, 0.6);
+  box-shadow: 0 4px 12px rgba(116, 239, 255, 0.2);
+}
 .game-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
 }
 
 .game-info h4 {
   margin: 0;
-  font-size: 14px;
+  font-size: 0.95rem;
   color: #fff;
+  transition: color 0.2s ease;
+  font-weight: 600;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
 }
-
+.game-item:hover .game-info h4 {
+  color: #74efff;
+}
 .game-info span {
   font-size: 12px;
   color: #888;
@@ -119,54 +160,49 @@ input:focus {
 }
 
 .search-results::-webkit-scrollbar-track {
-  border-radius: 3px;
-  background-color: transparent;
+  background-color: rgba(22, 33, 62, 0.5);
+  border-radius: 10px;
 }
 
 .search-results::-webkit-scrollbar-thumb {
-  background: #74efff;
-  border-radius: 3px;
-  border-width: 2px;
+  background: linear-gradient(180deg, #5ba9ce, #74efff);
+  border-radius: 10px;
+  border: 1px solid rgba(22, 33, 62, 0.5);
 }
 
 .search-results::-webkit-scrollbar-thumb:hover {
-  background: #5dbfcc;
+  background: linear-gradient(180deg, #74efff, #5ba9ce);
 }
 
 /* Mensagens de estado da busca */
 .search-tip {
   padding-top: 10px;
-  color: #74efff;
+  color: rgba(116, 239, 255, 0.8);
   text-align: center;
-  font-size: 14px;
+  font-size: 0.9rem;
+  text-shadow: 0 0 5px rgba(116, 239, 255, 0.2);
 }
 
 .search-no-results {
-  color: #74efff;
+  color: rgba(116, 239, 255, 0.8);
   text-align: center;
   padding: 10px;
-  font-size: 14px;
+  font-size: 0.9rem;
+  text-shadow: 0 0 5px rgba(116, 239, 255, 0.2);
 }
 
 /* ==============================================
    5. ESTILOS DO INDICADOR DE CARREGAMENTO
 ============================================== */
-.loading-bar-container {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  width: 100%; 
-  z-index: 1050; 
-}
-
-.spinner {
+.search-results .spinner {
   margin: 20px auto;
-  width: 40px;
-  height: 40px;
-  border: 5px solid #3c4550;
-  border-top: 5px solid #74efff;
+  width: 30px;
+  height: 30px;
+  border: 3px solid rgba(22, 33, 62, 0.8);
+  border-top: 3px solid #74efff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
+  box-shadow: 0 0 15px rgba(116, 239, 255, 0.2);
 }
 
 @keyframes spin {
@@ -175,6 +211,14 @@ input:focus {
   }
   100% {
     transform: rotate(360deg);
+  }
+}
+@keyframes fadeInResults {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 
