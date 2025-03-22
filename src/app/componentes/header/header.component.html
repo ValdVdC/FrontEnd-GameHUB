@@ -45,33 +45,50 @@
       
       <!-- Formulário de busca -->
       <form class="d-flex" *ngIf="buscadorHabilitado">
-        <!-- Campo de busca -->
-        <input 
-          class="form-control me-2 shadow-none" 
-          type="search" 
-          [(ngModel)]="busca" 
-          (input)="onSearch()"
-          (focus)="onFocusSearch()"
-          (blur)="onBlurSearch()"
-          [name]="'search'"
-          placeholder="Buscar jogos...">
+        <!-- Campo de busca com botão de limpar -->
+        <div class="search-input-container">
+          <input 
+            #searchInput
+            class="form-control shadow-none" 
+            type="search" 
+            [(ngModel)]="busca" 
+            (input)="onSearch(); onInputClear()"
+            (focus)="onFocusSearch()"
+            (blur)="onBlurSearch()"
+            [name]="'search'"
+            placeholder="Buscar jogos...">
+            
+          <button 
+            *ngIf="busca.length > 0" 
+            type="button" 
+            class="clear-button" 
+            (click)="busca = ''; onInputClear()">
+            <i class="bi bi-x-circle"></i>
+          </button>
+        </div>
         
         <!-- Resultados da busca -->
-        <div class="search-results" *ngIf="isSearchFocused">
+        <div class="search-results" 
+             #searchResults
+             *ngIf="isSearchFocused"
+             (mouseenter)="onResultsMouseEnter()" 
+             (mouseleave)="onResultsMouseLeave()">
           <!-- Dica de busca -->
           <div *ngIf="busca.length < 3">
             <p class="search-tip">Digite pelo menos 3 caracteres para gerar resultados!</p>
           </div>
           
           <!-- Indicador de carregamento -->
-          <div *ngIf="carregandoResultados && busca.length >= 3" class="spinner"></div>
+          <div *ngIf="carregandoResultados && busca.length >= 3" class="loading-container">
+            <div class="spinner"></div>
+            <p class="loading-text">Buscando jogos...</p>
+          </div>
           
           <!-- Lista de resultados encontrados -->
-          <div *ngIf="resultadosBusca.length > 0 && busca.length >= 3 && !carregandoResultados" 
-               (click)="onResultsMouseDown()">
+          <div *ngIf="resultadosBusca.length > 0 && busca.length >= 3 && !carregandoResultados">
             <div class="game-item" 
                  *ngFor="let game of resultadosBusca.slice(0, 10)" 
-                 (click)="buscarJogo(game.id)">
+                 (click)="onResultClick($event, game.id)">
               <img [src]="game.cover_url || 'assets/default-cover.png'" [alt]="game.name">
               <div class="game-info">
                 <h4>{{game.name}}</h4>
@@ -80,10 +97,26 @@
             </div>
           </div>
           
+          <!-- Botão para continuar busca no explorador -->
+          <div *ngIf="mostrarContinuarBusca()" 
+               class="continue-search-card"
+               (click)="continueSearch()">
+            <div class="explore-search-item">
+              <div class="explore-icon">
+                <i class="bi bi-binoculars"></i>
+              </div>
+              <div class="explore-info">
+                <h4>Continuar busca por "{{busca}}"</h4>
+                <span>Ver todos os resultados no Explorador</span>
+              </div>
+            </div>
+          </div>
+          
           <!-- Mensagem de nenhum resultado -->
           <div *ngIf="semResultados && busca.length >= 3 && !carregandoResultados" 
                class="search-no-results">
-            Não há jogos encontrados para esta busca.
+            <i class="bi bi-emoji-frown"></i>
+            <p>Não há jogos encontrados para "{{busca}}"</p>
           </div>
         </div>
       </form>

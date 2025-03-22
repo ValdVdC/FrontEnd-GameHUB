@@ -4,6 +4,7 @@ import { ApiService } from '../../services/api.service';
 import { Router } from '@angular/router';
 import { Game } from '../../models/game.model';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
+import { SearchService } from '../../services/search.service';
 interface PaginationState {
   currentPage: number;
   totalPages: number;
@@ -409,7 +410,8 @@ private getCurrentMode(): keyof PaginationStates {
     private apiService: ApiService,
     private router: Router,
     private genreNavigationService: GenreNavigationService,
-    private changeDetectorRef: ChangeDetectorRef
+    private changeDetectorRef: ChangeDetectorRef,
+    private searchService: SearchService
   ) {
     this.searchSubject.pipe(
       debounceTime(450),
@@ -444,7 +446,14 @@ private getCurrentMode(): keyof PaginationStates {
       // Obter o gênero atual que foi passado da navegação
       const currentGenre = this.genreNavigationService.getCurrentGenre();
       console.log('Current Genre from Service:', currentGenre);
-      
+      this.searchService.currentSearchTerm.pipe(
+        takeUntil(this.destroy$)
+      ).subscribe(term => {
+        if (term) {
+          this.searchTerm = term;
+          this.performSearch(term);
+        }
+      });
       if (currentGenre) {
         console.log('Processando gênero navegado:', currentGenre);
         

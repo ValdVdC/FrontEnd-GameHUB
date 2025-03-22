@@ -40,33 +40,67 @@ form.d-flex {
   margin-right: 2rem;
 }
 
-form.d-flex input {
+.search-input-container {
+  position: relative;
+  width: 100%;
+}
+
+.search-input-container input {
   background-color: rgba(22, 33, 62, 0.6);
   color: #ffffff;
   border: 2px solid rgba(116, 239, 255, 0.3);
   border-radius: 10px;
   padding: 8px 15px;
+  padding-right: 30px; /* Espaço para o botão de limpar */
   transition: all 0.3s ease;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
   width: 100%;
 }
 
-form.d-flex input:focus {
+.search-input-container input:focus {
   background-color: rgba(22, 33, 62, 0.8);
   border: 2px solid rgba(116, 239, 255, 0.8);
   box-shadow: 0 4px 15px rgba(116, 239, 255, 0.2);
   outline: none;
 }
 
-form.d-flex input::placeholder {
+.search-input-container input::placeholder {
   color: rgba(116, 239, 255, 0.6);
   opacity: 0.6;
   font-size: 0.9rem;
   transition: opacity 0.3s ease;
 }
 
-form.d-flex input:focus::placeholder {
+.search-input-container input:focus::placeholder {
   opacity: 0.3;
+}
+
+/* Botão de limpar campo de busca */
+.clear-button {
+  position: absolute;
+  right: 10px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: rgba(116, 239, 255, 0.7);
+  font-size: 1rem;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+  padding-right: 8px;
+}
+
+.clear-button:hover {
+  color: rgba(116, 239, 255, 1);
+  transform: translateY(-50%) scale(1.1);
+}
+
+.clear-button:focus {
+  outline: none;
 }
 
 /* ==============================================
@@ -84,15 +118,14 @@ form.d-flex input:focus::placeholder {
   overflow-y: auto;
   background: linear-gradient(145deg, rgba(13, 19, 36, 0.95), rgba(15, 23, 42, 0.98));
   border: 1px solid rgba(116, 239, 255, 0.1);
-  border-radius: 0px 0px 10px 10px;
+  border-radius: 10px;
   z-index: 1000;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  padding: 5px;
+  padding: 8px;
   backdrop-filter: blur(10px);
   transform-origin: top center;
   animation: fadeInResults 0.2s ease-out;
 }
-
 
 /* Estilização dos itens de jogo nos resultados */
 .game-item {
@@ -124,10 +157,12 @@ form.d-flex input:focus::placeholder {
   transition: all 0.3s ease;
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
+
 .game-item:hover img {
   border-color: rgba(116, 239, 255, 0.6);
   box-shadow: 0 4px 12px rgba(116, 239, 255, 0.2);
 }
+
 .game-info {
   flex: 1;
   display: flex;
@@ -146,9 +181,11 @@ form.d-flex input:focus::placeholder {
   display: -webkit-box;
   -webkit-box-orient: vertical;
 }
+
 .game-item:hover .game-info h4 {
   color: #74efff;
 }
+
 .game-info span {
   font-size: 12px;
   color: #888;
@@ -176,33 +213,52 @@ form.d-flex input:focus::placeholder {
 
 /* Mensagens de estado da busca */
 .search-tip {
-  padding-top: 10px;
+  padding: 15px 0;
   color: rgba(116, 239, 255, 0.8);
   text-align: center;
   font-size: 0.9rem;
   text-shadow: 0 0 5px rgba(116, 239, 255, 0.2);
+  vertical-align: center;
+  margin-top: auto;
+  margin-bottom: auto;
 }
-
-.search-no-results {
-  color: rgba(116, 239, 255, 0.8);
-  text-align: center;
-  padding: 10px;
-  font-size: 0.9rem;
-  text-shadow: 0 0 5px rgba(116, 239, 255, 0.2);
+.search-input-container input::-webkit-search-cancel-button {
+  display: none;
 }
-
 /* ==============================================
    5. ESTILOS DO INDICADOR DE CARREGAMENTO
 ============================================== */
+.loading-container {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 20px 0;
+  vertical-align: center;
+  margin-top: auto;
+  margin-bottom: auto;
+}
+
+.loading-text {
+  color: rgba(116, 239, 255, 0.8);
+  margin-top: 12px;
+  font-size: 0.9rem;
+  text-align: center;
+  vertical-align: center;
+  margin-bottom: auto;
+}
+
 .search-results .spinner {
-  margin: 20px auto;
-  width: 30px;
-  height: 30px;
+  width: 35px;
+  height: 35px;
   border: 3px solid rgba(22, 33, 62, 0.8);
   border-top: 3px solid #74efff;
   border-radius: 50%;
   animation: spin 1s linear infinite;
   box-shadow: 0 0 15px rgba(116, 239, 255, 0.2);
+  vertical-align: center;
+  margin-top: auto;
+  margin-bottom: auto;
 }
 
 @keyframes spin {
@@ -213,17 +269,108 @@ form.d-flex input:focus::placeholder {
     transform: rotate(360deg);
   }
 }
+
 @keyframes fadeInResults {
   from {
     opacity: 0;
+    transform: translateX(-50%) translateY(-10px);
   }
   to {
     opacity: 1;
+    transform: translateX(-50%) translateY(0);
   }
 }
 
+/* Mensagem de nenhum resultado aprimorada */
+.search-no-results {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: rgba(116, 239, 255, 0.8);
+  text-align: center;
+  padding: 15px;
+  font-size: 0.9rem;
+}
+
+.search-no-results i {
+  font-size: 2rem;
+  margin-bottom: 10px;
+  opacity: 0.7;
+}
+
+.search-no-results p {
+  margin: 0;
+}
+
 /* ==============================================
-   6. MEDIA QUERIES PARA RESPONSIVIDADE
+   6. ESTILIZAÇÃO REDESENHADA DO BOTÃO EXPLORADOR
+============================================== */
+.continue-search-card {
+  margin-top: 8px;
+  border-top: 1px solid rgba(116, 239, 255, 0.2);
+  padding-top: 8px;
+}
+
+.explore-search-item {
+  display: flex;
+  align-items: center;
+  background: linear-gradient(135deg, rgba(116, 239, 255, 0.1), rgba(116, 239, 255, 0.05));
+  border-radius: 10px;
+  padding: 12px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin: 5px;
+  border: 1px solid rgba(116, 239, 255, 0.15);
+}
+
+.explore-search-item:hover {
+  background: linear-gradient(135deg, rgba(116, 239, 255, 0.2), rgba(116, 239, 255, 0.1));
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(116, 239, 255, 0.15);
+}
+
+.explore-icon {
+  background: rgba(116, 239, 255, 0.1);
+  border-radius: 50%;
+  width: 40px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-right: 12px;
+  transition: all 0.3s ease;
+}
+
+.explore-search-item:hover .explore-icon {
+  background: rgba(116, 239, 255, 0.3);
+}
+
+.explore-icon i {
+  font-size: 1.5rem;
+  color: #74efff;
+  text-shadow: 0 0 8px rgba(116, 239, 255, 0.5);
+}
+
+.explore-info {
+  flex: 1;
+}
+
+.explore-info h4 {
+  margin: 0 0 4px 0;
+  font-size: 0.9rem;
+  color: #74efff;
+  font-weight: 700;
+}
+
+.explore-info span {
+  font-size: 0.75rem;
+  color: rgba(255, 255, 255, 0.6);
+  display: block;
+}
+
+/* ==============================================
+   7. MEDIA QUERIES PARA RESPONSIVIDADE
 ============================================== */
 @media (max-width: 991px) {
   .search-results {

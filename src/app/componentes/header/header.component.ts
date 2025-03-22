@@ -1,10 +1,11 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { debounceTime, Subject, Subscription, takeUntil } from 'rxjs';
+import { Component, HostListener, OnDestroy, OnInit, ElementRef, ViewChild } from '@angular/core';
+import { debounceTime, Subject, Subscription, takeUntil, fromEvent } from 'rxjs';
 import { ActivatedRoute, NavigationEnd, Router } from '@angular/router';
 import { filter } from 'rxjs/operators';
 import { ScrollService } from '../../services/scroll.service';
 import { ApiService } from '../../services/api.service';
 import { Game } from '../../models/game.model';
+import { SearchService } from '../../services/search.service';
 
 @Component({
   selector: 'app-header',
@@ -20,13 +21,17 @@ export class HeaderComponent implements OnInit, OnDestroy {
   // ==============================================
   // 2. PROPRIEDADES DO SISTEMA DE BUSCA
   // ==============================================
+  @ViewChild('searchInput') searchInput!: ElementRef;
+  @ViewChild('searchResults') searchResults!: ElementRef;
+  
   busca: string = '';
   resultadosBusca: Game[] = [];
   isSearchFocused: boolean = false;
   carregandoResultados: boolean = false;
   semResultados: boolean = false;
-  clickTimeout: any;
   buscadorHabilitado: boolean = true;
+  isUserInteractingWithResults: boolean = false;
+  ultimaBusca: string = ''; // Armazenar a última busca realizada
   
   // ==============================================
   // 3. GERENCIAMENTO DE SUBSCRIPTIONS E RXJS
@@ -48,13 +53,29 @@ export class HeaderComponent implements OnInit, OnDestroy {
     }
   }
   
+  // Event listeners para melhorar a interação com o dropdown
+  @HostListener('document:mousedown', ['$event'])
+  onDocumentClick(event: MouseEvent) {
+    // Verificar se o clique foi fora da área de resultados e do input
+    if (this.searchResults && this.searchInput) {
+      const targetElement = event.target as HTMLElement;
+      const clickedInSearchInput = this.searchInput.nativeElement.contains(targetElement);
+      const clickedInSearchResults = this.searchResults.nativeElement.contains(targetElement);
+      
+      if (!clickedInSearchInput && !clickedInSearchResults) {
+        this.isSearchFocused = false;
+      }
+    }
+  }
+  
   // ==============================================
   // 5. CONSTRUTOR E INJEÇÃO DE DEPENDÊNCIAS
   // ==============================================
   constructor(
     private scrollService: ScrollService, 
     private apiService: ApiService, 
-    private router: Router
+    private router: Router,
+    private searchService: SearchService
   ) {}
 
   // ==============================================
@@ -118,47 +139,61 @@ export class HeaderComponent implements OnInit, OnDestroy {
         takeUntil(this.destroy)
       )
       .subscribe(async(busca) => {
-        if (busca.length >= 3) {
-          this.semResultados = false;
-          this.carregandoResultados = true;
+        // Verificar se a busca é diferente da última realizada
+        if (busca !== this.ultimaBusca) {
+          this.ultimaBusca = busca;
           
-          this.apiService.buscarJogoPorNome(busca).subscribe({
-            next: (response) => {
-              // Verificar se a resposta tem a estrutura esperada
-              if (response && response.games) {
-                // Extrair os jogos do objeto de resposta
-                this.resultadosBusca = response.games.map((game:Game) => ({
-                  ...game,
-                  genres: game.genres || [] // Garantir que genres existe
-                }));
-              } else {
-                // Se a resposta for diretamente um array (formato antigo)
-                this.resultadosBusca = Array.isArray(response) ? response : [];
+          if (busca.length >= 3) {
+            // Resetar o estado antes de iniciar a busca
+            this.semResultados = false;
+            this.carregandoResultados = true;
+            this.resultadosBusca = []; // Limpar resultados anteriores imediatamente
+            
+            this.apiService.buscarJogoPorNome(busca).subscribe({
+              next: (response) => {
+                // Verificar se a busca atual ainda é relevante (usuário não mudou a busca)
+                if (busca === this.ultimaBusca) {
+                  // Verificar se a resposta tem a estrutura esperada
+                  if (response && response.games) {
+                    // Extrair os jogos do objeto de resposta
+                    this.resultadosBusca = response.games.map((game:Game) => ({
+                      ...game,
+                      genres: game.genres || [] // Garantir que genres existe
+                    }));
+                  } else {
+                    // Se a resposta for diretamente um array (formato antigo)
+                    this.resultadosBusca = Array.isArray(response) ? response : [];
+                  }
+                  
+                  // Ordenar os resultados pelo popularity_value (do maior para o menor)
+                  this.resultadosBusca.sort((a, b) => {
+                    // Se popularity_value estiver ausente, tratamos como 0
+                    const popularityA = a.popularity_value || 0;
+                    const popularityB = b.popularity_value || 0;
+                    
+                    // Ordenação decrescente (do maior para o menor valor)
+                    return popularityB - popularityA;
+                  });
+                  
+                  this.carregandoResultados = false;
+                  this.semResultados = this.resultadosBusca.length === 0;
+                }
+              },
+              error: () => {
+                // Verificar se a busca atual ainda é relevante
+                if (busca === this.ultimaBusca) {
+                  this.resultadosBusca = [];
+                  this.carregandoResultados = false;
+                  this.semResultados = true;
+                }
               }
-              
-              // Ordenar os resultados pelo popularity_value (do maior para o menor)
-              this.resultadosBusca.sort((a, b) => {
-                // Se popularity_value estiver ausente, tratamos como 0
-                const popularityA = a.popularity_value || 0;
-                const popularityB = b.popularity_value || 0;
-                
-                // Ordenação decrescente (do maior para o menor valor)
-                return popularityB - popularityA;
-              });
-              
-              this.carregandoResultados = false;
-              this.semResultados = this.resultadosBusca.length === 0;
-            },
-            error: () => {
-              this.resultadosBusca = [];
-              this.carregandoResultados = false;
-              this.semResultados = true;
-            }
-          });
-        } else {
-          this.resultadosBusca = [];
-          this.semResultados = false;
-          this.carregandoResultados = false;
+            });
+          } else {
+            // Caso a busca tenha menos de 3 caracteres
+            this.resultadosBusca = [];
+            this.semResultados = false;
+            this.carregandoResultados = false;
+          }
         }
       });
   }
@@ -173,29 +208,78 @@ export class HeaderComponent implements OnInit, OnDestroy {
   buscarJogo(gameId: number) {
     this.activeLink = ''; // Remove o destaque ao navegar para outra página
     this.router.navigate(['/detalhes', gameId]);
+    this.isSearchFocused = false; // Fechar os resultados da busca após navegar
   }
   
   // ==============================================
   // 9. MÉTODOS DO SISTEMA DE BUSCA
   // ==============================================
   onSearch() {
-    this.carregandoResultados = true;
+    // Se a busca mudou, mostrar o carregando imediatamente
+    if (this.busca.length >= 3 && this.busca !== this.ultimaBusca) {
+      this.carregandoResultados = true;
+      this.resultadosBusca = []; // Limpar resultados antigos quando o usuário digita
+    }
+    
     this.searchSubject.next(this.busca);
   }
   
   onFocusSearch() {
     this.isSearchFocused = true;
-  }
-  
-  onBlurSearch() {
-    this.clickTimeout = setTimeout(() => {
-      this.isSearchFocused = false;
-    }, 100);
-  }
-  
-  onResultsMouseDown() {
-    if (this.clickTimeout) {
-      clearTimeout(this.clickTimeout);
+    
+    // Se já tem 3+ caracteres mas nenhum resultado está sendo mostrado,
+    // reativa a busca para mostrar resultados
+    if (this.busca.length >= 3 && !this.carregandoResultados && this.resultadosBusca.length === 0) {
+      this.onSearch();
     }
+  }
+  
+  // Não fechar instantaneamente os resultados ao tirar o foco
+  onBlurSearch() {
+    // Manter os resultados abertos se o usuário estiver interagindo com eles
+    if (!this.isUserInteractingWithResults) {
+      setTimeout(() => {
+        this.isSearchFocused = false;
+      }, 300); // Aumento do timeout para dar mais tempo para o clique ser processado
+    }
+  }
+  
+  // Limpar a pesquisa e o status quando o input é limpo
+  onInputClear() {
+    if (this.busca === '') {
+      this.resultadosBusca = [];
+      this.carregandoResultados = false;
+      this.semResultados = false;
+      this.ultimaBusca = '';
+    }
+  }
+  
+  // Indicar que o usuário está interagindo com os resultados da busca
+  onResultsMouseEnter() {
+    this.isUserInteractingWithResults = true;
+  }
+  
+  onResultsMouseLeave() {
+    this.isUserInteractingWithResults = false;
+  }
+  
+  // Método para garantir que o clique nos resultados seja capturado corretamente
+  onResultClick(event: MouseEvent, gameId: number) {
+    event.preventDefault();
+    event.stopPropagation();
+    this.buscarJogo(gameId);
+  }
+  
+  continueSearch() {
+    this.searchService.setSearchTerm(this.busca);
+    this.router.navigate(['/explorador']);
+    this.isSearchFocused = false;
+  }
+  
+  // Verificar se deve mostrar o botão "Continuar busca"
+  mostrarContinuarBusca(): boolean {
+    return this.busca.length >= 3 && 
+           this.resultadosBusca.length > 0 && 
+           !this.carregandoResultados;
   }
 }
