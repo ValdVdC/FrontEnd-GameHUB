@@ -2,7 +2,7 @@ import { AfterViewInit, Component, OnDestroy, OnInit } from '@angular/core';
 import { ApiService } from '../../services/api.service';
 import { ScrollService } from '../../services/scroll.service';
 import { Router } from '@angular/router';
-import { ApiResponse, Game, GenreCategory } from '../../models/game.model';
+import { ApiResponse, Game, GenreCategory, PlatformCategory } from '../../models/game.model';
 import { lastValueFrom } from 'rxjs';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
 
@@ -48,6 +48,7 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
   ngOnInit(): void {
     this.buscarJogos();
     this.buscarCategorias();
+    this.buscarPlataformas();
   }
 
   ngAfterViewInit() {
@@ -391,5 +392,210 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     calcularSecaoMaisVisivel();
     
     this.observerInitialized = true;
+  }
+  plataformas: PlatformCategory[] = [];
+  plataformasCarregando: boolean = true;
+
+  jogosPorPlataforma: Map<string, Game[]> = new Map();
+  carregandoMaisPorPlataforma: Map<string, boolean> = new Map();
+  apiPagePorPlataforma: Map<string, number> = new Map();
+  temMaisJogosPorPlataforma: Map<string, boolean> = new Map();
+  plataformasProntas: Map<string, boolean> = new Map();
+  minJogosPorPlataforma: number = 11;
+  buscarPlataformas(): void {
+    this.plataformasCarregando = true;
+    this.apiService.buscarPlataformas().subscribe({
+      next: (data: PlatformCategory[]) => {
+        this.plataformas = data.map(platform => ({
+          ...platform,
+          startIndex: 0
+        }));
+        
+        // Inicializa os mapas para cada plataforma
+        this.plataformas.forEach(plataforma => {
+          const nomePlataforma = plataforma.value.platform;
+          const jogos = plataforma.value.games || [];
+          
+          this.jogosPorPlataforma.set(nomePlataforma, jogos);
+          this.carregandoMaisPorPlataforma.set(nomePlataforma, false);
+          this.apiPagePorPlataforma.set(nomePlataforma, 1);
+          this.temMaisJogosPorPlataforma.set(nomePlataforma, true);
+          
+          // Verifica se a plataforma já tem jogos suficientes
+          const temJogosSuficientes = jogos.length >= this.minJogosPorPlataforma;
+          this.plataformasProntas.set(nomePlataforma, temJogosSuficientes);
+          
+          // Inicia o carregamento de mais jogos se necessário
+          if (!temJogosSuficientes) {
+            this.buscarMaisJogosPorPlataforma(nomePlataforma);
+          }
+        });
+      },
+      error: (error: any) => {
+        console.log('Erro ao buscar plataformas:', error);
+      },
+      complete: () => {
+        this.plataformasCarregando = false;
+        this.iniciarObservador();
+      }
+    });
+  }
+  
+  // Método para buscar mais jogos por plataforma (similar ao de categorias)
+  async buscarMaisJogosPorPlataforma(plataforma: string): Promise<void> {
+    // Se já estiver carregando ou não houver mais jogos, retorna
+    if (this.carregandoMaisPorPlataforma.get(plataforma) || !this.temMaisJogosPorPlataforma.get(plataforma)) {
+      return;
+    }
+    
+    this.carregandoMaisPorPlataforma.set(plataforma, true);
+    
+    try {
+      const jogosAtuais = this.jogosPorPlataforma.get(plataforma) || [];
+      const paginaAtual = this.apiPagePorPlataforma.get(plataforma) || 1;
+      
+      // Se já tem jogos suficientes, marca a plataforma como pronta e não busca mais
+      if (jogosAtuais.length >= this.minJogosPorPlataforma) {
+        this.plataformasProntas.set(plataforma, true);
+        this.carregandoMaisPorPlataforma.set(plataforma, false);
+        return;
+      }
+      
+      // Busca mais jogos com retry
+      const resultado = await this.carregarJogosPorPlataformaComRetry(plataforma, paginaAtual);
+      
+      if (!resultado.sucesso) {
+        console.error(`Falha ao carregar mais jogos para ${plataforma} após múltiplas tentativas`);
+        this.temMaisJogosPorPlataforma.set(plataforma, false);
+        this.plataformasProntas.set(plataforma, true);
+        return;
+      }
+      
+      const response = resultado.dados;
+      
+      if (!response || !response.games || !Array.isArray(response.games)) {
+        console.error(`Resposta da API inválida para ${plataforma}:`, response);
+        this.temMaisJogosPorPlataforma.set(plataforma, false);
+        this.plataformasProntas.set(plataforma, true);
+        return;
+      }
+      
+      // Filtrar jogos por plataforma
+      const jogosDaPlataforma = response.games.filter(game => 
+        game.platforms && Array.isArray(game.platforms) && 
+        game.platforms.some(p => p.includes(plataforma) || plataforma.includes(p))
+      );
+      
+      // Verificar por duplicatas
+      const idsExistentes = new Set(jogosAtuais.map(game => game.id));
+      const novosJogos = jogosDaPlataforma.filter(game => !idsExistentes.has(game.id));
+      
+      if (novosJogos.length > 0) {
+        // Atualizar os jogos da plataforma
+        const jogosAtualizados = [...jogosAtuais, ...novosJogos];
+        this.jogosPorPlataforma.set(plataforma, jogosAtualizados);
+        
+        // Atualizar a plataforma nos dados principais
+        this.plataformas = this.plataformas.map(p => {
+          if (p.value.platform === plataforma) {
+            return {
+              ...p,
+              value: {
+                ...p.value,
+                games: jogosAtualizados
+              }
+            };
+          }
+          return p;
+        });
+        
+        // Incrementar a página para próxima busca
+        this.apiPagePorPlataforma.set(plataforma, paginaAtual + 1);
+        this.temMaisJogosPorPlataforma.set(plataforma, response.pagination.hasMore);
+        
+        // Verificar se já atingimos o número mínimo de jogos
+        if (jogosAtualizados.length >= this.minJogosPorPlataforma) {
+          this.plataformasProntas.set(plataforma, true);
+        } else if (response.pagination.hasMore) {
+          // Se ainda não tem jogos suficientes e há mais disponíveis, continua buscando
+          setTimeout(() => {
+            this.carregandoMaisPorPlataforma.set(plataforma, false);
+            this.buscarMaisJogosPorPlataforma(plataforma);
+          }, 1000);
+        } else {
+          // Se não há mais jogos disponíveis, marca a plataforma como pronta mesmo sem o mínimo
+          this.plataformasProntas.set(plataforma, true);
+        }
+      } else {
+        // Se não encontrou novos jogos, mas ainda há mais páginas
+        if (response.pagination.hasMore) {
+          this.apiPagePorPlataforma.set(plataforma, paginaAtual + 1);
+          setTimeout(() => {
+            this.carregandoMaisPorPlataforma.set(plataforma, false);
+            this.buscarMaisJogosPorPlataforma(plataforma);
+          }, 1000);
+        } else {
+          // Se não há mais jogos e não encontramos nenhum novo, marca como pronta
+          this.temMaisJogosPorPlataforma.set(plataforma, false);
+          this.plataformasProntas.set(plataforma, true);
+        }
+      }
+    } catch (error) {
+      console.error(`Erro ao carregar mais jogos para ${plataforma}:`, error);
+      this.temMaisJogosPorPlataforma.set(plataforma, false);
+      this.plataformasProntas.set(plataforma, true);
+    } finally {
+      this.carregandoMaisPorPlataforma.set(plataforma, false);
+    }
+  }
+  
+  // Função auxiliar para retry em caso de falha na API (similar à de categorias)
+  private async carregarJogosPorPlataformaComRetry(plataforma: string, pagina: number, maxTentativas = 3, delayInicial = 1000) {
+    let tentativa = 0;
+    let delayMs = delayInicial;
+    
+    while (tentativa < maxTentativas) {
+      try {
+        const response = await lastValueFrom(this.apiService.buscarJogos(pagina));
+        
+        return { 
+          sucesso: true, 
+          dados: response,
+          mensagem: 'Sucesso'
+        };
+      } catch (error) {
+        console.warn(`Tentativa ${tentativa + 1} falhou ao buscar jogos para ${plataforma}. Tentando novamente em ${delayMs}ms`);
+        tentativa++;
+        
+        await new Promise(resolve => setTimeout(resolve, delayMs));
+        delayMs = Math.min(delayMs * 1.5, 10000);
+      }
+    }
+    
+    return { 
+      sucesso: false, 
+      dados: null,
+      mensagem: `Falha após ${maxTentativas} tentativas`
+    };
+  }
+  
+  // Método para verificar se uma plataforma está pronta (similar à verificação de categorias)
+  plataformaPronta(plataforma: string): boolean {
+    const jogos = this.jogosPorPlataforma.get(plataforma) || [];
+    const temJogosSuficientes = jogos.length >= this.minJogosPorPlataforma;
+    const estaCarregando = this.carregandoMaisPorPlataforma.get(plataforma) || false;
+    const temMaisJogos = this.temMaisJogosPorPlataforma.get(plataforma) || false;
+    
+    if (temJogosSuficientes) {
+      this.plataformasProntas.set(plataforma, true);
+      return true;
+    }
+    
+    if (!estaCarregando && !temMaisJogos) {
+      this.plataformasProntas.set(plataforma, true);
+      return true;
+    }
+    
+    return this.plataformasProntas.get(plataforma) || false;
   }
 }

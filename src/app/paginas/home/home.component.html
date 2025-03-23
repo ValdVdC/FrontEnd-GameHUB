@@ -149,8 +149,104 @@
 </section>
 
 <!-- ==============================================
-     4. SEÇÃO DE COMUNIDADE
+     4. SEÇÃO DE PLATAFORMAS
 ============================================== -->
+
+<section id="platforms" class="platforms-section py-5">
+  <div class="container">
+    <div class="section-title-container">
+      <h2 class="section-title">Jogue em Qualquer Lugar</h2>
+    </div>
+    
+    <!-- Estado de carregamento global de plataformas -->
+    <div class="loading-container" *ngIf="plataformasCarregando">
+      <p>Carregando Plataformas...</p>
+      <div class="spinner"></div>
+    </div>
+    
+    <!-- Container principal das plataformas -->
+    <div class="platforms-grid" *ngIf="plataformas.length > 0">
+      <!-- Loop por cada plataforma -->
+      <div *ngFor="let platform of plataformas" 
+           class="platform-container"
+           [ngClass]="{'platform-playstation': platform.value.platform.includes('PlayStation'),
+                       'platform-xbox': platform.value.platform.includes('Xbox'),
+                       'platform-nintendo': platform.value.platform.includes('Nintendo'),
+                       'platform-pc': platform.value.platform.includes('PC'),
+                       'platform-mobile': platform.value.platform.includes('Mobile') || platform.value.platform.includes('Android') || platform.value.platform.includes('iOS')}">
+        
+        <!-- Estado de carregamento individual por plataforma -->
+        <div class="loading-container platform-loading" *ngIf="!plataformaPronta(platform.value.platform)">
+          <p>Carregando {{platform.value.platform}}...</p>
+          <div class="spinner"></div>
+        </div>
+        
+        <!-- Conteúdo da plataforma -->
+        <div class="platform-content" *ngIf="plataformaPronta(platform.value.platform)">
+          <!-- Cabeçalho da plataforma -->
+          <div class="platform-header">
+            <div class="platform-icon" [ngClass]="{'platform-icon-playstation': platform.value.platform.includes('PlayStation'),
+                                                   'platform-icon-xbox': platform.value.platform.includes('Xbox'),
+                                                   'platform-icon-nintendo': platform.value.platform.includes('Nintendo'),
+                                                   'platform-icon-pc': platform.value.platform.includes('PC'),
+                                                   'platform-icon-mobile': platform.value.platform.includes('Mobile') || platform.value.platform.includes('Android') || platform.value.platform.includes('iOS')}">
+              <i class="bi" [ngClass]="{'bi-playstation': platform.value.platform.includes('PlayStation'),
+                                        'bi-xbox': platform.value.platform.includes('Xbox'),
+                                        'bi-nintendo-switch': platform.value.platform.includes('Nintendo'),
+                                        'bi-pc-display': platform.value.platform.includes('PC'),
+                                        'bi-phone': platform.value.platform.includes('Mobile') || platform.value.platform.includes('Android') || platform.value.platform.includes('iOS')}"></i>
+            </div>
+            <h3 class="platform-name">{{platform.value.platform}}</h3>
+          </div>
+          
+          <!-- Destaques da plataforma -->
+          <div class="platform-featured">
+            <div class="featured-game" *ngIf="platform.value.games && platform.value.games.length > 0" (click)="detalhesJogo(platform.value.games[0].id)">
+              <div class="featured-image">
+                <img [src]="platform.value.games[0].cover_url || 'assets/default-cover.jpg'" [alt]="platform.value.games[0].name">
+                <div class="platform-overlay"></div>
+              </div>
+              <div class="featured-info">
+                <h4>{{platform.value.games[0].name}}</h4>
+                <div class="rating-badge" *ngIf="platform.value.games[0].total_rating">
+                  <i class="bi bi-star-fill"></i>
+                  {{platform.value.games[0].total_rating | formatarNota}}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Lista de jogos da plataforma -->
+          <div class="platform-games-list">
+            <div class="platform-game-item" *ngFor="let game of platform.value.games.slice(1, 11)" (click)="detalhesJogo(game.id)">
+              <img [src]="game.cover_url || 'assets/default-cover.jpg'" [alt]="game.name">
+              <div class="game-info">
+                <h5>{{game.name}}</h5>
+                <div class="mini-rating" *ngIf="game.total_rating">
+                  <i class="bi bi-star-fill"></i>
+                  {{game.total_rating | formatarNota}}
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <!-- Botão para ver mais jogos desta plataforma -->
+          <div class="platform-footer">
+            <button class="btn btn-platform">
+              Ver mais jogos
+              <i class="bi bi-arrow-right-circle"></i>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ==============================================
+     5. SEÇÃO DE COMUNIDADE
+============================================== -->
+
 <section id="community" class="community-section py-5">
   <div class="container">
     <div class="section-title-container">

@@ -11,7 +11,10 @@
 .genre-badge,
 .rating,
 .section-title,
-.category-genre {
+.category-genre,
+.platform-name,
+.featured-image,
+ img {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;
@@ -404,7 +407,26 @@ section {
   );
   color: #fff;
 }
-
+.platforms-section {
+  background: linear-gradient(
+    180deg,
+    #1d0d29 0%,    /* Herda final de categories */
+    #0e161f 50%,   /* Tom escuro neutro */
+    #1a0d30 100%   /* Volta para tom similar ao de community */
+  );
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+  padding: 80px 0;
+}
+.community-section{
+  background: linear-gradient(
+    180deg,
+    #1a0d30 ,    /* Herda final de categories */
+    #26163893 60%,   /* Azul metálico escuro */
+    #1a0d30 100%
+  );
+}
 .category-content {
   display: flex;
   flex-direction: column;
@@ -506,14 +528,6 @@ section {
   margin-bottom: 20px;
 }
 
-.community-section{
-  background: linear-gradient(
-    180deg,
-    #1d0d29,    /* Herda final de categories */
-    #26163893 60%,   /* Azul metálico escuro */
-    #1a0d30 100%
-  );
-}
 /* ==============================================
    6. ANIMAÇÕES E EFEITOS
 ============================================== */
@@ -648,5 +662,641 @@ section {
   .ver-mais-text h4 {
     font-size: 1.2rem;
   }
+
+  .platform-games-list {
+    grid-template-columns: 1fr;
+    max-height: 190px;
+  }
+  
+  .platform-container {
+    height: 480px;
+  }
 }
 
+@media (max-width: 992px) {
+  .platforms-grid {
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+  }
+}
+
+@media (max-width: 576px) {
+  .platforms-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .platform-container {
+    height: auto;
+    max-height: 500px;
+  }
+  
+  .platform-games-list {
+    max-height: 150px;
+  }
+}
+
+/* ==============================================
+   8. SEÇÃO DE PLATAFORMAS
+============================================== */
+
+/* Layout principal em camadas */
+.platforms-grid {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 40px;
+  margin-top: 30px;
+  perspective: 1000px;
+}
+
+/* Containers de plataforma em camadas */
+.platform-container {
+  flex: 0 0 auto;
+  width: 350px;
+  height: 450px;
+  position: relative;
+  transition: all 0.5s cubic-bezier(0.19, 1, 0.22, 1);
+  transform-style: preserve-3d;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 15px;
+  overflow: hidden;
+}
+
+.platform-container:hover {
+  transform: translateY(-5px);
+  z-index: 10;
+}
+
+/* Aplicando sombras específicas por plataforma */
+.platform-playstation {
+  box-shadow: 0 10px 30px rgba(0, 114, 229, 0.2);
+  background: linear-gradient(145deg, #001428, #0a2d50);
+  border-color: rgba(0, 114, 229, 0.3);
+}
+
+.platform-playstation:hover {
+  box-shadow: 0 15px 35px rgba(0, 114, 229, 0.4);
+}
+
+.platform-xbox {
+  box-shadow: 0 10px 30px rgba(16, 124, 16, 0.2);
+  background: linear-gradient(145deg, #052410, #0a3b1c);
+  border-color: rgba(16, 124, 16, 0.3);
+}
+
+.platform-xbox:hover {
+  box-shadow: 0 15px 35px rgba(16, 124, 16, 0.4);
+}
+
+.platform-nintendo {
+  box-shadow: 0 10px 30px rgba(230, 0, 18, 0.2);
+  background: linear-gradient(145deg, #8b0000, #cc0000);
+  border-color: rgba(230, 0, 18, 0.3);
+}
+
+.platform-nintendo:hover {
+  box-shadow: 0 15px 35px rgba(230, 0, 18, 0.4);
+}
+
+.platform-pc {
+  box-shadow: 0 10px 30px rgba(0, 153, 204, 0.2);
+  background: linear-gradient(145deg, #091b2b, #12283d);
+  border-color: rgba(0, 187, 249, 0.3);
+}
+
+.platform-pc:hover {
+  box-shadow: 0 15px 35px rgba(0, 153, 204, 0.4);
+}
+
+.platform-mobile {
+  box-shadow: 0 10px 30px rgba(153, 51, 204, 0.2);
+  background: linear-gradient(145deg, #220a38, #3a1164);
+  border-color: rgba(170, 51, 255, 0.3);
+}
+
+.platform-mobile:hover {
+  box-shadow: 0 15px 35px rgba(153, 51, 204, 0.4);
+}
+
+.platform-content {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 0;
+  position: relative;
+  overflow: hidden;
+  backface-visibility: hidden;
+}
+
+/* Cabeçalho de cada plataforma */
+.platform-header {
+  padding: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 15px;
+  position: relative;
+  z-index: 2;
+  background: rgba(0, 0, 0, 0.2);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.platform-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 0 15px rgba(0, 0, 0, 0.3);
+  transition: transform 0.3s ease;
+}
+
+.platform-container:hover .platform-icon {
+  transform: scale(1.1);
+}
+
+.platform-icon i {
+  font-size: 1.8rem;
+}
+
+.platform-name {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0;
+  letter-spacing: 1px;
+  text-shadow: 0 0 10px rgba(0, 0, 0, 0.5);
+  transition: all 0.3s ease;
+}
+
+.platform-container:hover .platform-name {
+  text-shadow: 0 0 15px rgba(255, 255, 255, 0.3);
+}
+
+/* Destaque do jogo principal */
+.platform-featured {
+  position: relative;
+  width: 100%;
+  height: 200px;
+  overflow: hidden;
+}
+
+.featured-game {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  cursor: pointer;
+  overflow: hidden;
+}
+
+.featured-image {
+  width: 100%;
+  height: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.featured-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.5s ease;
+}
+
+.platform-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(to bottom, rgba(0,0,0,0.1) 0%, rgba(0,0,0,0.7) 100%);
+  z-index: 1;
+}
+
+.featured-info {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  width: 100%;
+  padding: 15px;
+  z-index: 2;
+  transition: transform 0.3s ease;
+}
+
+.platform-container:hover .featured-info {
+  transform: translateY(-5px);
+}
+
+.featured-info h4 {
+  margin: 0 0 8px 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  text-shadow: 0 0 5px rgba(0, 0, 0, 0.8);
+}
+
+.rating-badge {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.85rem;
+  font-weight: 500;
+}
+
+.rating-badge i {
+  margin-right: 5px;
+  font-size: 0.85rem;
+}
+
+/* Lista de jogos secundários */
+.platform-games-list {
+  flex-grow: 1;
+  padding: 15px;
+  overflow-y: auto;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  max-height: 160px;
+}
+
+.platform-game-item {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  height: 70px;
+}
+
+.platform-game-item:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+}
+
+.platform-game-item img {
+  width: 50px;
+  height: 100%;
+  object-fit: cover;
+  transition: transform 0.3s ease;
+}
+
+.platform-game-item:hover img {
+  transform: scale(1.05);
+}
+
+.game-info {
+  padding: 0 10px;
+  flex-grow: 1;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.game-info h5 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 100px;
+  transition: color 0.3s ease;
+}
+
+.platform-game-item:hover .game-info h5 {
+  color: #74efff;
+}
+
+.mini-rating {
+  font-size: 0.75rem;
+  display: flex;
+  align-items: center;
+  margin-top: 3px;
+}
+
+.mini-rating i {
+  font-size: 0.7rem;
+  margin-right: 3px;
+}
+
+/* Botão de rodapé para ver mais */
+.platform-footer {
+  padding: 15px;
+  text-align: center;
+}
+
+.btn-platform {
+  border: none;
+  padding: 8px 20px;
+  border-radius: 25px;
+  font-weight: 500;
+  font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  width: 100%;
+}
+
+.btn-platform i {
+  font-size: 1.1rem;
+  transition: transform 0.3s ease;
+}
+
+.btn-platform:hover i {
+  transform: translateX(5px);
+}
+
+/* Scrollbar personalizada para a lista de jogos */
+.platform-games-list::-webkit-scrollbar {
+  width: 5px;
+}
+
+.platform-games-list::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+}
+
+.platform-games-list::-webkit-scrollbar-track {
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 5px;
+}
+
+/* ============================================== 
+   TEMAS ESPECÍFICOS POR PLATAFORMA
+============================================== */
+
+/* PlayStation - Tema Azul */
+.platform-playstation {
+  background: linear-gradient(145deg, #001428, #0a2d50);
+  border-color: rgba(0, 114, 229, 0.3);
+}
+
+.platform-icon-playstation {
+  background: #0070cc;
+  color: white;
+  box-shadow: 0 0 15px rgba(0, 114, 229, 0.5);
+}
+
+.platform-playstation .platform-name {
+  color: #00a2ff;
+  text-shadow: 0 0 8px rgba(0, 162, 255, 0.4);
+}
+
+.platform-playstation .rating-badge,
+.platform-playstation .mini-rating {
+  color: #00a2ff;
+}
+
+.platform-playstation .rating-badge i,
+.platform-playstation .mini-rating i {
+  color: #00a2ff;
+}
+
+.platform-playstation .btn-platform {
+  background: #0070cc;
+  color: white;
+  box-shadow: 0 0 10px rgba(0, 114, 229, 0.4);
+}
+
+.platform-playstation .platform-games-list::-webkit-scrollbar-thumb {
+  background: #0070cc;
+}
+
+.platform-playstation .platform-game-item:hover {
+  background: rgba(0, 114, 229, 0.2);
+}
+
+.platform-playstation .featured-game:hover img {
+  transform: scale(1.05);
+}
+
+.platform-playstation .btn-platform:hover {
+  background: #0062b3;
+  box-shadow: 0 0 15px rgba(0, 114, 229, 0.6);
+}
+
+.platform-playstation .btn-platform:hover i {
+  transform: translateX(5px);
+}
+
+/* Xbox - Tema Verde */
+.platform-xbox {
+  background: linear-gradient(145deg, #052410, #0a3b1c);
+  border-color: rgba(16, 124, 16, 0.3);
+}
+
+.platform-icon-xbox {
+  background: #107c10;
+  color: white;
+  box-shadow: 0 0 15px rgba(16, 124, 16, 0.5);
+}
+
+.platform-xbox .platform-name {
+  color: #5dc21e;
+  text-shadow: 0 0 8px rgba(93, 194, 30, 0.4);
+}
+
+.platform-xbox .rating-badge,
+.platform-xbox .mini-rating {
+  color: #5dc21e;
+}
+
+.platform-xbox .rating-badge i,
+.platform-xbox .mini-rating i {
+  color: #5dc21e;
+}
+
+.platform-xbox .btn-platform {
+  background: #107c10;
+  color: white;
+  box-shadow: 0 0 10px rgba(16, 124, 16, 0.4);
+}
+
+.platform-xbox .platform-games-list::-webkit-scrollbar-thumb {
+  background: #107c10;
+}
+
+.platform-xbox .platform-game-item:hover {
+  background: rgba(16, 124, 16, 0.2);
+}
+
+.platform-xbox .featured-game:hover img {
+  transform: scale(1.05);
+}
+
+.platform-xbox .btn-platform:hover {
+  background: #0e6a0e;
+  box-shadow: 0 0 15px rgba(16, 124, 16, 0.6);
+}
+
+.platform-xbox .btn-platform:hover i {
+  transform: translateX(5px);
+}
+
+/* Nintendo - Tema Vermelho e Azul */
+.platform-nintendo {
+  background: linear-gradient(145deg, #8b0000, #cc0000);
+  border-color: rgba(230, 0, 18, 0.3);
+}
+
+.platform-icon-nintendo {
+  background: linear-gradient(135deg, #e60012 50%, #00a2e8 50%);
+  color: white;
+  box-shadow: 0 0 15px rgba(230, 0, 18, 0.5);
+}
+
+.platform-nintendo .platform-name {
+  color: #ffffff;
+  text-shadow: 0 0 8px rgba(230, 0, 18, 0.6);
+}
+
+.platform-nintendo .rating-badge,
+.platform-nintendo .mini-rating {
+  color: #ffffff;
+}
+
+.platform-nintendo .rating-badge i,
+.platform-nintendo .mini-rating i {
+  color: #ffffff;
+}
+
+.platform-nintendo .btn-platform {
+  background: linear-gradient(90deg, #e60012, #00a2e8);
+  color: white;
+  box-shadow: 0 0 10px rgba(230, 0, 18, 0.4);
+}
+
+.platform-nintendo .platform-games-list::-webkit-scrollbar-thumb {
+  background:#00a2e8;
+}
+
+.platform-nintendo .platform-game-item:hover {
+  background: rgba(230, 0, 18, 0.2);
+}
+
+.platform-nintendo .featured-game:hover img {
+  transform: scale(1.05);
+}
+
+.platform-nintendo .btn-platform:hover {
+  background: linear-gradient(90deg, #d10011, #0091d1);
+  box-shadow: 0 0 15px rgba(230, 0, 18, 0.6);
+}
+
+.platform-nintendo .btn-platform:hover i {
+  transform: translateX(5px);
+}
+
+/* PC - Tema Ciano/Azul-Tech */
+.platform-pc {
+  background: linear-gradient(145deg, #091b2b, #12283d);
+  border-color: rgba(0, 187, 249, 0.3);
+}
+
+.platform-icon-pc {
+  background: #0099cc;
+  color: white;
+  box-shadow: 0 0 15px rgba(0, 153, 204, 0.5);
+}
+
+.platform-pc .platform-name {
+  color: #00bbf9;
+  text-shadow: 0 0 8px rgba(0, 187, 249, 0.4);
+}
+
+.platform-pc .rating-badge,
+.platform-pc .mini-rating {
+  color: #00bbf9;
+}
+
+.platform-pc .rating-badge i,
+.platform-pc .mini-rating i {
+  color: #00bbf9;
+}
+
+.platform-pc .btn-platform {
+  background: #0099cc;
+  color: white;
+  box-shadow: 0 0 10px rgba(0, 153, 204, 0.4);
+}
+
+.platform-pc .platform-games-list::-webkit-scrollbar-thumb {
+  background: #0099cc;
+}
+
+.platform-pc .platform-game-item:hover {
+  background: rgba(0, 153, 204, 0.2);
+}
+
+.platform-pc .featured-game:hover img {
+  transform: scale(1.05);
+}
+
+.platform-pc .btn-platform:hover {
+  background: #0088b3;
+  box-shadow: 0 0 15px rgba(0, 153, 204, 0.6);
+}
+
+.platform-pc .btn-platform:hover i {
+  transform: translateX(5px);
+}
+
+/* Mobile - Tema Roxo/Lilás */
+.platform-mobile {
+  background: linear-gradient(145deg, #220a38, #3a1164);
+  border-color: rgba(170, 51, 255, 0.3);
+}
+
+.platform-icon-mobile {
+  background: #9933cc;
+  color: white;
+  box-shadow: 0 0 15px rgba(153, 51, 204, 0.5);
+}
+
+.platform-mobile .platform-name {
+  color: #c77dff;
+  text-shadow: 0 0 8px rgba(199, 125, 255, 0.4);
+}
+
+.platform-mobile .rating-badge,
+.platform-mobile .mini-rating {
+  color: #c77dff;
+}
+
+.platform-mobile .rating-badge i,
+.platform-mobile .mini-rating i {
+  color: #c77dff;
+}
+
+.platform-mobile .btn-platform {
+  background: #9933cc;
+  color: white;
+  box-shadow: 0 0 10px rgba(153, 51, 204, 0.4);
+}
+
+.platform-mobile .platform-games-list::-webkit-scrollbar-thumb {
+  background: #9933cc;
+}
+
+.platform-mobile .platform-game-item:hover {
+  background: rgba(153, 51, 204, 0.2);
+}
+
+.platform-mobile .featured-game:hover img {
+  transform: scale(1.0);
+}
+
+.platform-mobile .btn-platform:hover {
+  background: #8829b3;
+  box-shadow: 0 0 15px rgba(153, 51, 204, 0.6);
+}
+
+.platform-mobile .btn-platform:hover i {
+  transform: translateX(5px);
+}

@@ -5,6 +5,7 @@ export interface Game {
     cover_url: string;
     total_rating?: number;
     popularity_value?:number;
+    platforms?: string[];
   }
   
   export interface ApiResponse {
@@ -22,4 +23,14 @@ export interface Game {
       genre: string;
       games: Game[];
     };
+  }
+  
+  export interface PlatformCategory {
+    id: number;
+    value: {
+      platform: string;
+      games: Game[];
+    };
+    status: string;
+    startIndex?: number;
   }
