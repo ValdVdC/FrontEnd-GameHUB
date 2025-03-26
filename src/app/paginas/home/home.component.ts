@@ -393,6 +393,11 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     
     this.observerInitialized = true;
   }
+
+  /* ==============================================
+     9. Carregamento de jogos por plataforma
+  ============================================== */
+
   plataformas: PlatformCategory[] = [];
   plataformasCarregando: boolean = true;
 

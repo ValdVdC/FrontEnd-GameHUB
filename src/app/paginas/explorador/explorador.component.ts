@@ -45,7 +45,9 @@ export class ExploradorComponent {
   games: Game[] = [];
   filteredGames: Game[] = [];
   genres: string[] = [];
+  platforms: string[] = [];
   genresLoaded = false;
+  platformsLoaded = false;
   loading: boolean = false;
   private loadingStartTime: number | null = null;
   private loadingTimeout: any = null;
@@ -201,6 +203,7 @@ export class ExploradorComponent {
 
   // Filtros
   selectedGenres: { [key: string]: boolean } = {};
+  selectedPlatforms: { [key: string]: boolean } = {};
   selectedRating: string = '';
   sortBy: string = 'relevance';
   genreFilterMode: 'inclusive' | 'exclusive' = 'inclusive';
@@ -540,6 +543,10 @@ private getCurrentMode(): keyof PaginationStates {
       console.error('Erro ao carregar gêneros:', error);
       this.setLoading(false);
     });
+    this.loadPlatforms().then(()=>{
+      console.log('Platforms after loading:', this.platforms);
+    })
+
     
     this.detectMobile();
     window.addEventListener('resize', () => this.detectMobile());
@@ -574,6 +581,7 @@ private getCurrentMode(): keyof PaginationStates {
             selectedGenres: this.selectedGenres,
             genreFilterMode: this.genreFilterMode,
             selectedRating: this.selectedRating,
+            selectedPlatforms: this.selectedPlatforms,
             sortBy: this.sortBy,
             isSearchMode: this.isSearchMode,
             searchTerm: this.searchTerm,
@@ -636,6 +644,7 @@ private recuperarEstadoDoLocal() {
                 this.selectedGenres = estado.selectedGenres;
                 this.genreFilterMode = estado.genreFilterMode;
                 this.selectedRating = estado.selectedRating;
+                this.selectedPlatforms = estado.selectedPlatforms;
                 this.sortBy = estado.sortBy;
                 this.searchTerm = estado.searchTerm;
                 this.searchResults = estado.searchResults;
@@ -1364,13 +1373,20 @@ limparEstadoERecarregar() {
             this.showNoGenresMessage = true;
             return;
         }
-
+        if (!this.hasSelectedPlatforms) {
+          this.filteredGames = [];
+          this.updateVisiblePages();
+          this.setLoading(false); // Use o método setLoading para gerenciar corretamente
+          this.showNoPlatformsMessage = true; // Adicione esta propriedade no componente
+          return;
+      }
         // Ativa o loading
         this.loading = true
 
         // Filtra os jogos atuais
         let filtered = this.filterByGenres([...this.games]);
         filtered = this.filterByRating(filtered);
+        filtered = this.filterByPlatforms(filtered); 
 
         // Aplica a ordenação
         if (this.sortBy !== 'relevance') {
@@ -1396,6 +1412,7 @@ limparEstadoERecarregar() {
                 // Reaplica os filtros após carregar mais jogos
                 filtered = this.filterByGenres([...this.games]);
                 filtered = this.filterByRating(filtered);
+                filtered = this.filterByPlatforms(filtered); 
                 filtered = this.sortGames(filtered);
 
                 // Se não conseguimos novos jogos após o carregamento
@@ -1421,6 +1438,7 @@ limparEstadoERecarregar() {
                 await this.carregarMaisJogos();
                 filtered = this.filterByGenres([...this.games]);
                 filtered = this.filterByRating(filtered);
+                filtered = this.filterByPlatforms(filtered); 
                 filtered = this.sortGames(filtered);
             }
         }
@@ -1447,24 +1465,11 @@ private async applySearchFilters(resetPage: boolean = true) {
     if (this.searchResults.length === 0 && this.searchTerm) {
       return; 
     }
-
-    // Verificação importante para lidar corretamente com a opção "jogos sem gênero"
-    const selectedGenresList = Object.entries(this.selectedGenres || {})
-      .filter(([_, selected]) => selected)
-      .map(([genre]) => genre);
-
-    // Se não há gêneros selecionados E não incluímos jogos sem gênero
-    if (selectedGenresList.length === 0 && !this.includeNoGenre) {
-      this.filteredSearchResults = [];
-      this.showNoGenresMessage = true;
-      this.updateVisiblePages();
-      return;
-    } else {
-      this.showNoGenresMessage = false;
-    }
-
+    console.log('Resultados de busca:', this.searchResults);
+    console.log('Primeiro jogo (plataformas):', this.searchResults[0]?.platforms);
     let filtered = this.filterByGenres([...this.searchResults]);
     filtered = this.filterByRating(filtered);
+    filtered = this.filterByPlatforms(filtered);  // Filtro de plataformas adicionado aqui
     
     // Aplicar ordenação
     filtered = this.sortGames(filtered);
@@ -1472,25 +1477,24 @@ private async applySearchFilters(resetPage: boolean = true) {
     this.filteredSearchResults = filtered;
     this.updateVisiblePages();
     
-    // Add a maximum attempt counter for search mode
+    // Adicionar lógica para carregar mais resultados se necessário
     let attempts = 0;
     const MAX_ATTEMPTS = 3;
     
-    // Verificar se precisamos carregar mais resultados
     const jogosNecessarios = this.currentPage * this.itemsPerPage;
     while (filtered.length < jogosNecessarios && 
-          this.searchHasMore && 
-          !this.carregandoMais && 
-          attempts < MAX_ATTEMPTS) {
+           this.searchHasMore && 
+           !this.carregandoMais && 
+           attempts < MAX_ATTEMPTS) {
       
       await this.carregarMaisResultadosBusca();
       
       // Reapply filters after loading more results
       filtered = this.filterByGenres([...this.searchResults]);
       filtered = this.filterByRating(filtered);
+      filtered = this.filterByPlatforms(filtered);
       filtered = this.sortGames(filtered);
       this.filteredSearchResults = filtered;
-      
       attempts++;
       
       // If we're not getting more results, break out of the loop
@@ -2411,6 +2415,12 @@ private updateVisiblePages() {
     event.stopPropagation();
   }
 
+  isAdditionalFiltersOpen = false;
+
+  toggleAdditionalFilters() {
+    this.isAdditionalFiltersOpen = !this.isAdditionalFiltersOpen;
+  }
+  
   @HostListener('document:click', ['$event'])
   onClickOutside(event: MouseEvent) {
     if (this.isMobile) {
@@ -2526,4 +2536,165 @@ private updateVisiblePages() {
     this.filteredSearchResults = [];
     this.updateVisiblePages();
   }
+
+  /* ==============================================
+     16. Gestão de plataformas
+  ============================================== */
+
+  // Carregar plataformas de forma mais eficiente
+  private async loadPlatforms() {
+    try {
+      const response = await lastValueFrom(this.apiService.buscarPlataformas());
+      
+      // Obter todas as plataformas únicas
+      const allPlatforms = [...new Set(response.map(p => p.value.platform))];
+      console.log('Plataformas disponíveis:', allPlatforms);
+      
+      // Definir categorias principais
+      this.platforms = [
+        ...Object.keys(this.platformMappings).filter(k => k !== 'Outros'),
+        'Outros', 
+      ];
+      
+      // Inicializar seleção (todas marcadas por padrão)
+      this.platforms.forEach(platform => {
+        this.selectedPlatforms[platform] = true;
+      });
+      
+      this.platformsLoaded = true;
+    } catch (error) {
+      console.error('Erro ao carregar plataformas:', error);
+      this.platformsLoaded = true;
+    }
+  }
+
+  // Simplificar o mapeamento de plataformas
+  private platformMappings: { [key: string]: RegExp[] } = {
+    'PlayStation': [/playstation/i, /ps[1-5x]?/i, /ps\s?vita/i, /psp/i],
+    'Xbox': [/xbox/i, /xbox\s*(360|one|series)/i],
+    'Nintendo': [/nintendo/i, /switch/i, /wii/i, /gamecube/i, /3ds/i, /ds/i, /n64/i, /snes/i, /nes/i],
+    'PC': [/pc/i, /windows/i, /mac/i, /linux/i, /steam/i, /epic/i, /gog/i],
+    'Mobile': [/android/i, /ios/i, /iphone/i, /ipad/i, /mobile/i, /phone/i, /tablet/i],
+    'Outros': [] // Captura plataformas não mapeadas
+  };
+
+  includeNoPlatform:boolean = true
+  allPlatformsSelected: boolean = true;
+
+  // Novo método para alternar todas as plataformas
+  toggleAllPlatforms() {
+    // Se todos estiverem selecionados, desmarcar tudo
+    if (this.allPlatformsSelected) {
+      this.allPlatformsSelected = false;
+      this.platforms.forEach(platform => {
+        this.selectedPlatforms[platform] = false;
+      });
+      this.includeNoPlatform = false;
+    } else {
+      // Se alguns estiverem desmarcados, marcar tudo
+      this.allPlatformsSelected = true;
+      this.platforms.forEach(platform => {
+        this.selectedPlatforms[platform] = true;
+      });
+      this.includeNoPlatform = true;
+    }
+    
+    this.onPlatformChange();
+  }
+  togglePlatform(platform: string) {
+    this.selectedPlatforms[platform] = !this.selectedPlatforms[platform];
+    this.updateAllPlatformsCheckbox();
+    this.onPlatformChange();
+  }
+  toggleNoPlatform() {
+    this.includeNoPlatform = !this.includeNoPlatform;
+    this.updateAllPlatformsCheckbox();
+    this.onPlatformChange();
+  }
+  updateAllPlatformsCheckbox() {
+    // Verifica se todos os checkboxes individuais estão marcados
+    this.allPlatformsSelected = this.platforms.every(platform => 
+      this.selectedPlatforms[platform]
+    ) && this.includeNoPlatform;
+  }
+  // Método otimizado para filtrar por plataformas
+  private filterByPlatforms(games: Game[]): Game[] {
+    // Verificar se nenhuma plataforma está selecionada
+    if (!this.hasSelectedPlatforms) {
+      return [];
+    }
+  
+    // Restante do código permanece igual ao que você já tinha
+    const selectedPlatformsList = Object.entries(this.selectedPlatforms)
+      .filter(([_, selected]) => selected)
+      .map(([platform]) => platform);
+    
+    return games.filter(game => {
+      // Tratar jogos sem plataforma como caso especial
+      if (!game.platforms || game.platforms.length === 0) {
+        return this.selectedPlatforms['Sem Plataforma'] || this.includeNoPlatform;
+      }
+      
+      // Se nenhuma plataforma está selecionada, apenas tratar jogos com plataforma
+      if (selectedPlatformsList.length === 0) {
+        return false;
+      }
+      
+      // Normalizar plataformas (caso sejam objetos)
+      const gamePlatforms = Array.isArray(game.platforms) 
+        ? (typeof game.platforms[0] === 'object' && game.platforms[0] !== null
+          ? game.platforms.map((p: any) => p.name)
+          : game.platforms)
+        : [game.platforms];
+      
+      // Verificar correspondência com as plataformas selecionadas
+      return selectedPlatformsList.some(selectedPlatform => {
+        if (selectedPlatform === 'Outros') {
+          // Verificar se alguma plataforma do jogo não corresponde a nenhuma categoria conhecida
+          return gamePlatforms.some(platformName => {
+            const isInKnownCategory = Object.entries(this.platformMappings)
+              .filter(([key]) => key !== 'Outros')
+              .some(([_, regexList]) => 
+                regexList.some(regex => regex.test(String(platformName)))
+              );
+            
+            return !isInKnownCategory;
+          });
+        } else if (selectedPlatform === 'Sem Plataforma') {
+          return false; // Tratado anteriormente
+        } else {
+          // Verificar se alguma plataforma do jogo corresponde à categoria selecionada
+          const regexList = this.platformMappings[selectedPlatform];
+          return gamePlatforms.some(platformName => 
+            regexList.some(regex => regex.test(String(platformName)))
+          );
+        }
+      });
+    });
+  }
+
+  // Melhorar manipulação de eventos
+  onPlatformChange() {
+    // Resetar para primeira página
+    this.currentPage = 1;
+    
+    // Atualizar o estado do checkbox "Todas as Plataformas"
+    this.updateAllPlatformsCheckbox();
+    
+    // Aplicar filtros de acordo com o modo atual
+    if (this.isSearchMode) {
+      this.applySearchFilters(true);
+    } else {
+      this.applyFilters(true);
+    }
+  }
+
+  // Método getter simplificado
+  showNoPlatformsMessage: boolean = false;
+
+// Método para verificar plataformas
+  get hasSelectedPlatforms(): boolean {
+      return Object.values(this.selectedPlatforms).some(v => v) || this.includeNoPlatform;
+  }
+
 }

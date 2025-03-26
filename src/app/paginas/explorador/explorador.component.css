@@ -114,7 +114,6 @@
 .dropdown-control:hover {
   background-color: rgba(22, 33, 62, 0.4);
 }
-
 .selected-text {
   display: flex;
   align-items: center;
@@ -140,6 +139,114 @@
 
 .dropdown-control.expanded .dropdown-arrow {
   transform: translateY(-50%) rotate(180deg);
+}
+.additional-filters-container {
+  grid-column: span 3; /* Spans entire width of filters row */
+  position: relative;
+  width: 100%;
+  min-height: 50px;
+  transition: min-height 0.3s ease-in-out;
+}
+
+.additional-filters-toggle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background-color: rgba(22, 33, 62, 0.8);
+  border-radius: 8px;
+  padding: 8px 12px;
+  color: #74efff;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-top: 15px;
+}
+
+.additional-filters-toggle:hover {
+  background-color: rgba(116, 239, 255, 0.1);
+}
+
+.additional-filters-arrow {
+  display: inline-block;
+  margin-left: 10px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid #74efff;
+  transition: transform 0.3s ease;
+}
+
+.additional-filters-arrow.expanded {
+  transform: rotate(180deg);
+}
+
+.additional-filters-dropdown {
+  position: relative;
+  width: 100%;
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition: 
+    max-height 0.3s ease-in-out, 
+    opacity 0.3s ease-in-out;
+  border-radius: 8px;
+  margin-top: 10px;
+  overflow: visible;
+}
+
+.additional-filters-dropdown.open {
+  max-height: 300px;
+  opacity: 1;
+  padding: 15px;
+  background: transparent;
+}
+.additional-filters-dropdown.closed {
+  max-height: 300px;
+  opacity: 1;
+  padding: 15px;
+  background: transparent;
+}
+
+
+.additional-filters-content {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+  transition: opacity 0.3s ease-in-out;
+  opacity: 0;
+}
+
+.placeholder-filter {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.placeholder-filter label {
+  color: #74efff;
+  font-size: 0.9rem;
+}
+
+.additional-filters-dropdown {
+  position: relative;
+  width: 100%;
+  max-height: 0;
+  overflow: visible;
+  opacity: 0;
+  transition: 
+    max-height 0.3s ease-in-out, 
+    opacity 0.3s ease-in-out,
+    padding 0.3s ease-in-out;
+  border-radius: 8px;
+  margin-top: 10px;
+  padding: 0 15px;
+}
+
+.additional-filters-dropdown.open .additional-filters-content {
+  opacity: 1;
+}
+.additional-filters-dropdown.open .platform-dropdown-container {
+  opacity: 1;
 }
 
 /* ==============================================
@@ -318,7 +425,7 @@
   opacity: 0;
   pointer-events: none;
   transition: opacity 0.3s ease;
-  z-index: 4;
+  z-index: 20;
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -599,7 +706,111 @@
 }
 
 /* ==============================================
-   6. GAME GRID & CARDS
+   6. ESTILO DO DROPDOWN DE PLATAFORMAS
+============================================== */
+
+.platform-filter-container {
+  position: relative;
+  z-index: 2;
+  display: block;
+  width: 100%;
+}
+
+.platform-dropdown-container {
+  position: relative;
+  width: 100%;
+  transition: opacity 0.3s ease-in-out;
+  opacity: 0;
+}
+
+.platform-dropdown {
+  position: relative;
+  padding-left: 0;
+  width: 100%;
+}
+
+.platform-checkboxes-dropdown {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: rgba(22, 33, 62, 0.95);
+  border-radius: 8px;
+  border: 1px solid rgba(116, 239, 255, 0.3);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.4);
+  max-height: 0;
+  opacity: 0;
+  overflow: hidden;
+  transition: 
+    max-height 0.3s ease-in-out, 
+    opacity 0.3s ease-in-out,
+    visibility 0.3s ease-in-out;
+  visibility: hidden;
+}
+
+.platform-checkboxes-dropdown.open {
+  max-height: 300px;
+  opacity: 1;
+  visibility: visible;
+}
+
+.platform-checkboxes {
+  display: flex;
+  flex-direction: column;
+}
+
+.platform-checkboxes-dropdown::-webkit-scrollbar {
+  width: 6px;
+}
+
+.platform-checkboxes-dropdown::-webkit-scrollbar-thumb {
+  background: #74efff;
+  border-radius: 4px;
+}
+
+.platform-dropdown .dropdown-control.expanded .platform-checkboxes-dropdown {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.option-platform {
+  display: flex;
+  align-items: center;
+  padding: 12px 12px;
+  margin: 6px 6px;
+  border-radius: 4px;
+  gap: 8px;
+  transition: background-color 0.3s ease;
+}
+
+.option-platform:hover {
+  background-color: rgba(116, 239, 255, 0.1);
+}
+
+.special-platform {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  padding-bottom: 8px;
+  margin-bottom: 8px;
+}
+
+.platform-filter-container .form-check-label {
+  color: white;
+  transition: color 0.3s ease;
+  user-select: none;
+}
+
+.platform-filter-container .form-check-input:checked + .form-check-label {
+  color: #74efff;
+}
+
+.option-platform .form-check-label {
+  padding-right: 24px;
+  align-items: center;
+  margin-left: -4px;
+}
+
+/* ==============================================
+   7. GAME GRID & CARDS
 ============================================== */
 .games-grid {
   min-height: calc(100vh - 400px);
@@ -840,7 +1051,7 @@ h3 {
 }
 
 /* ==============================================
-   7. PAGINAÇÃO & NAVEGAÇÃO
+   8. PAGINAÇÃO & NAVEGAÇÃO
 ============================================== */
 .pagination-container {
   display: flex;
@@ -961,7 +1172,7 @@ h3 {
   box-shadow: none;
 }
 /* ==============================================
-   8. ESTADO DE SEM RESULTADOS
+   9. ESTADO DE SEM RESULTADOS
 ============================================== */
 .no-results {
   text-align: center;
@@ -1033,7 +1244,7 @@ h3 {
   transition: all 0.3s ease;
 }
 /* ==============================================
-   9. ANIMAÇÕES DE LOADING
+   10. ANIMAÇÕES DE LOADING
 ============================================== */
 .loading-container {
   position: fixed;
@@ -1221,7 +1432,7 @@ h3 {
 }
 
 /* ==============================================
-   10. ANIMAÇÕES
+   11. ANIMAÇÕES
 ============================================== */
 @keyframes spin {
   100% { transform: rotate(360deg); }
@@ -1287,17 +1498,22 @@ h3 {
 }
 
 /* ==============================================
-   11. MEDIA QUERIES / RESPONSIVIDADE
+   12. MEDIA QUERIES / RESPONSIVIDADE
 ============================================== */
 @media (max-width: 768px) {
   .explorer-section {
     padding-top: 60px;
   }
-  
-  .filters-row {
-    grid-template-columns: 1fr;
+  .search-filters-container {
+    padding: 15px;
   }
-  
+
+  .filters-row {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+  }
+ 
   .filter-group {
     margin-bottom: 15px;
   }
@@ -1402,7 +1618,7 @@ h3 {
 }
 
 /* ==============================================
-   12. Prevenção de seleção de texto
+   13. Prevenção de seleção de texto
 ============================================== */
 .game-card,
 .game-card-categories,
@@ -1421,7 +1637,8 @@ h3 {
 .page-info,
 .page-numbers,
 .no-results,
-.loading-container {
+.loading-container,
+span {
   user-select: none;
   -webkit-user-select: none;
   -moz-user-select: none;

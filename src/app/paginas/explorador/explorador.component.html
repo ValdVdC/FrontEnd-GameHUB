@@ -20,7 +20,7 @@
           </div>
           
           <!-- Linha de Filtros -->
-          <div class="filters-row">
+          <div class="filters-row full-width">
           <!-- Filtro de Gêneros-->
           <div class="filter-group genre-filter-container custom-filter">
             <div class="filter-header">
@@ -49,7 +49,7 @@
                         </span>
                       </span>
                     </label>
-                    <span class="dropdown-arrow"></span>
+                    <span class="dropdown-arrow" (click)="isMobile && toggleDropdown('genre')"></span>
                   </div>
                   
                   <!-- Lista de Checkboxes de Gêneros - Modificada para ter visibilidade controlada -->
@@ -94,33 +94,33 @@
               
               <!-- Filter Mode Sidebar -->
               <div class="filter-mode-sidebar"[class.closed]="activeDropdown !== 'genre'">
-                <div class="mode-option">
-                  <input type="radio" 
-                        id="filter-mode-inclusive" 
-                        name="genreFilterMode"
-                        [value]="'inclusive'"
-                        [(ngModel)]="genreFilterMode"
-                        (change)="onFilterModeChange()">
-                  <label for="filter-mode-inclusive">
-                    <i class="bi bi-filter"></i>
-                    <span class="mode-tooltip">Inclusivo</span>
-                  </label>
-                </div>
-                <div class="mode-option">
-                  <input type="radio" 
-                        id="filter-mode-exclusive" 
-                        name="genreFilterMode"
-                        [value]="'exclusive'"
-                        [(ngModel)]="genreFilterMode"
-                        (change)="onFilterModeChange()">
-                  <label for="filter-mode-exclusive">
-                    <i class="bi bi-filter-square"></i>
-                    <span class="mode-tooltip">Exclusivo</span>
-                  </label>
+                  <div class="mode-option">
+                    <input type="radio" 
+                          id="filter-mode-inclusive" 
+                          name="genreFilterMode"
+                          [value]="'inclusive'"
+                          [(ngModel)]="genreFilterMode"
+                          (change)="onFilterModeChange()">
+                    <label for="filter-mode-inclusive">
+                      <i class="bi bi-filter"></i>
+                      <span class="mode-tooltip">Inclusivo</span>
+                    </label>
+                  </div>
+                  <div class="mode-option">
+                    <input type="radio" 
+                          id="filter-mode-exclusive" 
+                          name="genreFilterMode"
+                          [value]="'exclusive'"
+                          [(ngModel)]="genreFilterMode"
+                          (change)="onFilterModeChange()">
+                    <label for="filter-mode-exclusive">
+                      <i class="bi bi-filter-square"></i>
+                      <span class="mode-tooltip">Exclusivo</span>
+                    </label>
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
 
             <!-- Filtro de Avaliação -->
             <div class="filter-group rating-filter-container custom-filter">
@@ -181,9 +181,91 @@
                 </div>
               </div>
             </div>
+
+            <div class="additional-filters-container">
+              <div class="additional-filters-toggle" (click)="toggleAdditionalFilters()">
+                <span>Mais Filtros</span>
+                <span class="additional-filters-arrow" [class.expanded]="isAdditionalFiltersOpen"></span>
+              </div>
+              
+              <div class="additional-filters-dropdown" [class.open]="isAdditionalFiltersOpen">
+                <div class="additional-filters-content">
+                  <div class="filter-group platform-filter-container custom-filter">
+                    <div class="filter-header">
+                      <label>Plataformas</label>
+                    </div>
+                    <div class="platform-dropdown-container">
+                      <div class="platform-dropdown"
+                        (mouseenter)="!isMobile && openDropdown('platform')"
+                        (mouseleave)="!isMobile && closeDropdown('platform')"
+                        (click)="isMobile && toggleDropdown('platform')">
+                        
+                        <div class="dropdown-control" [class.expanded]="activeDropdown === 'platform'">
+                          <div class="form-check select-all" (click)="$event.stopPropagation()" (change)="toggleAllPlatforms()">
+                            <input 
+                              type="checkbox" 
+                              id="select-all-platforms"
+                              [checked]="allPlatformsSelected"
+                              class="form-check-input"> 
+                            <label for="select-all-platforms" class="form-check-label">
+                              <span class="custom-checkbox"></span>
+                              <span class="selected-text">
+                                Todas as Plataformas
+                              </span>
+                            </label>
+                            <span class="dropdown-arrow" (click)="isMobile && toggleDropdown('platform')"></span>
+                          </div>
+                          
+                          <div class="platform-checkboxes-dropdown" 
+                            [class.open]="activeDropdown === 'platform'" 
+                            [class.closed]="activeDropdown !== 'platform'">
+                            <div class="form-check option-platform special-platform"
+                                (click)="toggleNoPlatform()">
+                                <input type="checkbox" 
+                                  id="platform-none" 
+                                  [checked]="includeNoPlatform"
+                                  class="form-check-input">
+                                <label for="platform-none" class="form-check-label">
+                                  <span class="custom-checkbox"></span>
+                                  <span class="label-text">
+                                    <i class="bi bi-dash-circle"></i> Sem plataforma
+                                  </span>
+                                </label>
+                             </div>
+                            <div class="platform-checkboxes">
+                              <div *ngFor="let platform of platforms" 
+                                class="form-check option-platform"
+                                (click)="togglePlatform(platform)">
+                                <input type="checkbox" 
+                                  [id]="'platform-' + platform"
+                                  [checked]="selectedPlatforms[platform]"
+                                  class="form-check-input">
+                                <label [for]="'platform-' + platform" class="form-check-label">
+                                  <span class="custom-checkbox"></span>
+                                  <span class="label-text">{{platform}}</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>                
+                  <div class="filter-group placeholder-filter">
+                    <label></label>
+                    <!-- Dropdown or input components can be added here -->
+                  </div>
+                  <div class="filter-group placeholder-filter">
+                    <label></label>
+                    <!-- Dropdown or input components can be added here -->
+                  </div>
+                </div>
+              </div>
+            </div>
+            
           </div>
         </div>
-    
+
         <!-- ============================================== 
              3. INDICADOR DE CARREGAMENTO 
              ============================================== -->
@@ -303,6 +385,7 @@
              
              <!-- Ícones diferentes para diferentes casos -->
              <i class="bi bi-emoji-frown" *ngIf="hasSelectedGenres && 
+                  hasSelectedPlatforms &&
                  ((isSearchMode && searchResults.length > 0) || 
                  (!isSearchMode && games.length > 0))"></i>
              <i class="bi bi-filter-circle" *ngIf="!hasSelectedGenres"></i>
@@ -328,7 +411,7 @@
               </ul>
              </div>
              <!-- Caso 2: Modo normal (sem busca) mas sem jogos com os filtros atuais -->
-             <div *ngIf="hasSelectedGenres && !isSearchMode && games.length > 0" class="no-results-message">
+             <div *ngIf="hasSelectedGenres && hasSelectedPlatforms && !isSearchMode && games.length > 0" class="no-results-message">
                  <h4>Nenhum jogo encontrado</h4>
                  <p>Os filtros atuais estão limitando muito os resultados. Tente:</p>
                  <ul class="suggestions-list">
@@ -374,6 +457,17 @@
                      </button>
                  </div>
              </div>
+             <!-- Caso 5: Nenhuma plataforma selecionada -->
+            <div *ngIf="platformsLoaded && !loading && !hasSelectedPlatforms" class="no-results-message">
+              <i class="bi bi-filter-circle"></i>
+              <h4>Filtros limitando resultados</h4>
+              <p>Selecione pelo menos uma plataforma para visualizar os jogos</p>
+              <div class="action-buttons">
+                  <button class="btn btn-neon" (click)="toggleAllPlatforms()">
+                      Selecionar Todas as Plataformas
+                  </button>
+              </div>
+            </div>
           </div>
       </div>
     </section>
