@@ -793,15 +793,18 @@ limparEstadoERecarregar() {
   /* ==============================================
      7. CARREGAMENTO DE DADOS
   ============================================== */
+  hasData = false;
 
   private async loadInitialGames() {
     try {
+      this.hasData = false;
       // Reset normal mode pagination
       this.completelyResetPagination('normal');
       
       this.apiPage = 1;
       const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
       this.games = response.games;
+      this.hasData = this.games.length > 0;
       this.temMaisJogos = response.pagination.hasMore;
       
       // Guarantee sorting is correctly applied
@@ -817,8 +820,8 @@ limparEstadoERecarregar() {
       console.error('Erro ao carregar jogos:', error);
       this.filteredGames = [];
     } finally {
-      // Ensure loading is turned off
-      this.setLoading(false);
+        this.hasData = this.games.length > 0;
+        this.setLoading(false);
     }
   }
 
