@@ -491,6 +491,7 @@ private getCurrentMode(): keyof PaginationStates {
         this.performSearch(term);
       }
     });
+    this.scrollToTop();
   }
   
   // Método para processar navegação de gênero
