@@ -6,6 +6,7 @@ import { Game } from '../../models/game.model';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
 import { SearchService } from '../../services/search.service';
 import { PlatformNavigationService } from '../../services/platform-navigation.service';
+import { ChangeDetectionStrategy } from '@angular/core';
 interface PaginationState {
   currentPage: number;
   totalPages: number;
@@ -35,7 +36,9 @@ interface SearchTermState {
 @Component({
   selector: 'app-explorador',
   templateUrl: './explorador.component.html',
-  styleUrl: './explorador.component.css'
+  styleUrl: './explorador.component.css',
+  changeDetection: ChangeDetectionStrategy.OnPush
+
 })
 
 export class ExploradorComponent {
