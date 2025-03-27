@@ -2142,122 +2142,122 @@ updateAllSelected() {
     }
     
     return source.slice(startIndex, endIndex);
-}
+    }
 
- private lastConfirmedPage: number | null = null;
-    
- get totalPages() {
-  const state = this.getCurrentPaginationState();
-  const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
-  const calculatedPages = Math.ceil(source.length / state.itemsPerPage);
-  
-  const hasMoreContent = this.isSearchMode ? this.searchHasMore : this.temMaisJogos;
-  if (!hasMoreContent) {
+    private lastConfirmedPage: number | null = null;
+        
+    get totalPages() {
+      const state = this.getCurrentPaginationState();
+      const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+      const calculatedPages = Math.ceil(source.length / state.itemsPerPage);
+      
+      const hasMoreContent = this.isSearchMode ? this.searchHasMore : this.temMaisJogos;
+      if (!hasMoreContent) {
+          return Math.max(1, calculatedPages);
+      }
+
+      if (this.loading || this.carregandoMais) {
+          return Math.max(calculatedPages, this.currentPage);
+      }
+
+      const itemsOnLastPage = source.length % state.itemsPerPage;
+      if (itemsOnLastPage === 0 && source.length > 0) {
+          return calculatedPages + 1;
+      }
+
       return Math.max(1, calculatedPages);
-  }
+    }
 
-  if (this.loading || this.carregandoMais) {
-      return Math.max(calculatedPages, this.currentPage);
-  }
+    private eliminarDuplicatas() {
+      // Uso de Map para preservar a ordem de inserção
+      const jogosUnicos = new Map();
+      
+      // Adiciona jogos ao Map usando ID como chave
+      this.games.forEach(game => {
+          jogosUnicos.set(game.id, game);
+      });
+      
+      // Converte o Map de volta para array
+      this.games = Array.from(jogosUnicos.values());
+      
+      // Reaplica os filtros para garantir o estado correto
+      this.applyFilters(false);
+    }
 
-  const itemsOnLastPage = source.length % state.itemsPerPage;
-  if (itemsOnLastPage === 0 && source.length > 0) {
-      return calculatedPages + 1;
-  }
+    private updateVisiblePages() {
+      const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
+      const temJogos = source.length > 0;
+      
+      // Nova condição para verificar explicitamente se há resultados
+      const hasAnyResults = this.isSearchMode ? 
+        this.filteredSearchResults.length > 0 : 
+        this.filteredGames.length > 0;
 
-  return Math.max(1, calculatedPages);
-}
+      let hasMoreResults = false;
+      
+      if (this.isSearchMode && this.searchTerm) {
+          const termNormalizado = this.searchTerm.trim().toLowerCase();
+          const termState = this.getSearchTermState(termNormalizado);
+          hasMoreResults = termState.hasMore;
+      } else {
+          hasMoreResults = this.temMaisJogos;
+      }
 
-private eliminarDuplicatas() {
-  // Uso de Map para preservar a ordem de inserção
-  const jogosUnicos = new Map();
-  
-  // Adiciona jogos ao Map usando ID como chave
-  this.games.forEach(game => {
-      jogosUnicos.set(game.id, game);
-  });
-  
-  // Converte o Map de volta para array
-  this.games = Array.from(jogosUnicos.values());
-  
-  // Reaplica os filtros para garantir o estado correto
-  this.applyFilters(false);
-}
+      // Atualizado para considerar resultados reais
+      const shouldShow = (hasAnyResults || this.loading || this.carregandoMais) && 
+                      (hasMoreResults || this.currentPage > 1 || hasAnyResults);
 
-private updateVisiblePages() {
-  const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
-  const temJogos = source.length > 0;
-  
-  // Nova condição para verificar explicitamente se há resultados
-  const hasAnyResults = this.isSearchMode ? 
-    this.filteredSearchResults.length > 0 : 
-    this.filteredGames.length > 0;
+      // Atualização imediata para evitar atrasos visuais
+      this.shouldShowPagination = shouldShow && hasAnyResults;
+      
+      // Se não houver jogos mas estamos carregando, ainda mostramos paginação
+      if (!temJogos && (this.loading || this.carregandoMais)) {
+          this.pagesToShow = [this.currentPage]; // Mostra a página atual
+          return;
+      }
+      
+      // Se realmente não há jogos e não estamos carregando, mostra apenas página 1
+      if (!temJogos && !this.loading && !this.carregandoMais) {
+          this.pagesToShow = [1];
+          return;
+      }
 
-  let hasMoreResults = false;
-  
-  if (this.isSearchMode && this.searchTerm) {
-      const termNormalizado = this.searchTerm.trim().toLowerCase();
-      const termState = this.getSearchTermState(termNormalizado);
-      hasMoreResults = termState.hasMore;
-  } else {
-      hasMoreResults = this.temMaisJogos;
-  }
+      const total = Math.max(this.totalPages, this.currentPage);
+      const current = this.currentPage;
+      const range = 1;
+      let pages: (number | string)[] = [];
 
-  // Atualizado para considerar resultados reais
-  const shouldShow = (hasAnyResults || this.loading || this.carregandoMais) && 
-                   (hasMoreResults || this.currentPage > 1 || hasAnyResults);
+      pages.push(1);
 
-  // Atualização imediata para evitar atrasos visuais
-  this.shouldShowPagination = shouldShow && hasAnyResults;
-  
-  // Se não houver jogos mas estamos carregando, ainda mostramos paginação
-  if (!temJogos && (this.loading || this.carregandoMais)) {
-      this.pagesToShow = [this.currentPage]; // Mostra a página atual
-      return;
-  }
-  
-  // Se realmente não há jogos e não estamos carregando, mostra apenas página 1
-  if (!temJogos && !this.loading && !this.carregandoMais) {
-      this.pagesToShow = [1];
-      return;
-  }
+      let start = Math.max(2, current - range);
+      let end = Math.min(total - 1, current + range);
 
-  const total = Math.max(this.totalPages, this.currentPage);
-  const current = this.currentPage;
-  const range = 1;
-  let pages: (number | string)[] = [];
+      if (start > 2) pages.push('...');
+      for (let i = start; i <= end; i++) pages.push(i);
+      if (end < total - 1) pages.push('...');
+      if (total > 1) pages.push(total);
 
-  pages.push(1);
+      if (!pages.includes(current)) {
+        pages = [...pages, current].sort((a, b) => {
+          if (typeof a === 'string') return 1;
+          if (typeof b === 'string') return -1;
+          return a - b;
+        });
+      }
 
-  let start = Math.max(2, current - range);
-  let end = Math.min(total - 1, current + range);
-
-  if (start > 2) pages.push('...');
-  for (let i = start; i <= end; i++) pages.push(i);
-  if (end < total - 1) pages.push('...');
-  if (total > 1) pages.push(total);
-
-  if (!pages.includes(current)) {
-    pages = [...pages, current].sort((a, b) => {
-      if (typeof a === 'string') return 1;
-      if (typeof b === 'string') return -1;
-      return a - b;
-    });
-  }
-
-  this.pagesToShow = [...new Set(pages)];
-  
-  // MODIFICADO: Usar o estado específico do termo atual para controlar a visibilidade da setinha
-  if (this.isSearchMode && this.searchTerm) {
-    const termNormalizado = this.searchTerm.trim().toLowerCase();
-    const termState = this.getSearchTermState(termNormalizado);
-    
-    // Desabilitar a setinha apenas quando estamos na última página E não há mais resultados para ESTE termo específico
-    this.disableNextArrow = this.currentPage === total && !termState.hasMore;
-  } else {
-    // Para o modo normal (não-busca), usar a lógica original
-    this.disableNextArrow = this.currentPage === total && !this.temMaisJogos;
-  }
+      this.pagesToShow = [...new Set(pages)];
+      
+      // MODIFICADO: Usar o estado específico do termo atual para controlar a visibilidade da setinha
+      if (this.isSearchMode && this.searchTerm) {
+        const termNormalizado = this.searchTerm.trim().toLowerCase();
+        const termState = this.getSearchTermState(termNormalizado);
+        
+        // Desabilitar a setinha apenas quando estamos na última página E não há mais resultados para ESTE termo específico
+        this.disableNextArrow = this.currentPage === total && !termState.hasMore;
+      } else {
+        // Para o modo normal (não-busca), usar a lógica original
+        this.disableNextArrow = this.currentPage === total && !this.temMaisJogos;
+      }
   }
 
   private async executarMudancaPagina(page: number) {
