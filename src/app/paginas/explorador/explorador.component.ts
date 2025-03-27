@@ -439,7 +439,7 @@ private getCurrentMode(): keyof PaginationStates {
   ngOnInit() {
     this.setLoading(true);
     this.preLoading = true;
-  
+    this.transitioning = true;
     const estadoRecuperado = this.recuperarEstadoDoLocal();
   
     // Carregar gêneros e plataformas em paralelo
@@ -477,9 +477,11 @@ private getCurrentMode(): keyof PaginationStates {
         this.applyFilters(false);
         this.setLoading(false);
       }
+      this.loadInitialGamesWithTransition(estadoRecuperado);
     }).catch(error => {
       console.error('Erro ao carregar dados:', error);
       this.setLoading(false);
+      this.transitioning = false;
     });
   
     // Detecção de dispositivo móvel
@@ -489,7 +491,19 @@ private getCurrentMode(): keyof PaginationStates {
     // Salvar estado periodicamente
     this.intervalSalvarEstado = setInterval(() => this.salvarEstadoNoLocal(), 5000);
   }
-  
+  private loadInitialGamesWithTransition(estadoRecuperado: boolean) {
+    this.loadInitialGames().then(() => {
+      // Após carregar jogos, adicionar um pequeno delay
+      setTimeout(() => {
+        this.transitioning = false;  // Desativa transição
+        this.setLoading(false);
+      }, 300);  // Delay de 300ms para garantir transição suave
+    }).catch(error => {
+      console.error('Erro ao carregar jogos:', error);
+      this.transitioning = false;
+      this.setLoading(false);
+    });
+  }
   // Método para configurar assinatura de busca
   private setupSearchSubscription() {
     this.searchService.currentSearchTerm.pipe(
@@ -765,6 +779,7 @@ limparEstadoERecarregar() {
 
   private async loadInitialGames() {
     try {
+      this.transitioning = true;
       // Reset normal mode pagination
       this.completelyResetPagination('normal');
       
@@ -782,7 +797,9 @@ limparEstadoERecarregar() {
       
       // Force refresh pagination display
       this.updateVisiblePages();
+      this.transitioning = false;
     } catch (error) {
+      this.transitioning = false;
       console.error('Erro ao carregar jogos:', error);
       this.filteredGames = [];
     } finally {
