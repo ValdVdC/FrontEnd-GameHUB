@@ -97,14 +97,32 @@ export class DetalhesComponent implements OnInit, OnDestroy {
     // Navigate to the explorer page
     this.router.navigate(['/explorador']);
   }
-  navegarParaExploradorComPlataforma(platform: string | { name: string }) {
-    // Handle both string and object platform
-    const platformName = typeof platform === 'string' ? platform : platform.name;
-    
-    // Set the platform to navigate to
-    this.platformNavigationService.navigateToPlatform(platformName);
-    
-    // Navigate to the explorer page
-    this.router.navigate(['/explorador']);
-  }
+navegarParaExploradorComPlataforma(platform: string | { name: string }) {
+  // Handle both string and object platform
+  const platformName = typeof platform === 'string' ? platform : platform.name;
+  
+  // Mapeamento de plataformas (similar ao do explorador)
+  const platformMappings: { [key: string]: RegExp[] } = {
+    'PlayStation': [/playstation/i, /ps[1-5x]?/i, /ps\s?vita/i, /psp/i],
+    'Xbox': [/xbox/i, /xbox\s*(360|one|series)/i],
+    'Nintendo': [/nintendo/i, /switch/i, /wii/i, /gamecube/i, /3ds/i, /ds/i, /n64/i, /snes/i, /nes/i],
+    'PC': [/pc/i, /windows/i, /mac/i, /linux/i, /steam/i, /epic/i, /gog/i],
+    'Mobile': [/android/i, /ios/i, /iphone/i, /ipad/i, /mobile/i, /phone/i, /tablet/i],
+    'Outros': [] // Captura plataformas não mapeadas
+  };
+
+  // Encontrar a categoria da plataforma
+  let mappedPlatform = Object.keys(platformMappings).find(category => 
+    platformMappings[category].some(regex => regex.test(platformName))
+  );
+
+  // Se não encontrar, usar 'Outros'
+  mappedPlatform = mappedPlatform || 'Outros';
+  
+  // Defina a plataforma para navegar
+  this.platformNavigationService.navigateToPlatform(mappedPlatform);
+  
+  // Vai para a página explorador
+  this.router.navigate(['/explorador']);
+}
 }

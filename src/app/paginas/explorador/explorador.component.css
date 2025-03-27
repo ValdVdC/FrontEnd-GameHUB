@@ -984,6 +984,11 @@
   color: #ff7474;
   border: 1px solid rgba(255, 116, 116, 0.3);
 }
+.game-card:hover .rating.no-rating {
+  background: rgba(255, 116, 116, 0.2);
+  color: #ff7474;
+  border: 1px solid rgba(255, 116, 116, 0.3);
+}
 .rating i {
     font-size: 0.8rem;
 }

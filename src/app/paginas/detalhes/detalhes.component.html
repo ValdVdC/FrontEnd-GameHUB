@@ -27,7 +27,7 @@
             </div>
           </div>
           <div class="game-card-platform">
-            <div class="platform" *ngFor="let platformInfo of info.platforms_info">
+            <div class="platform" *ngFor="let platformInfo of info.platforms_info" (click)="navegarParaExploradorComPlataforma(platformInfo.name)">
               <img [src]="platformInfo.logo_url" [alt]=platformInfo.name class="img-fluid platform-logo">
               <span class="tooltip">{{platformInfo.name}}</span>
             </div>
