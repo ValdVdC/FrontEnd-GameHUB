@@ -440,70 +440,47 @@ private getCurrentMode(): keyof PaginationStates {
     this.setLoading(true);
     this.preLoading = true;
     this.transitioning = true;
-    const estadoRecuperado = this.recuperarEstadoDoLocal();
   
-    // Carregar gêneros e plataformas em paralelo
-    Promise.all([
-      this.loadGenres(),
-      this.loadPlatforms()
-    ]).then(([, ]) => {
-      console.log('Genres after loading:', this.genres);
-      console.log('Platforms after loading:', this.platforms);
-  
-      // Configuração de observables de busca
-      this.setupSearchSubscription();
-  
-      // Processamento de navegação de gênero
-      const currentGenre = this.genreNavigationService.getCurrentGenre();
-      if (currentGenre) {
-        this.processGenreNavigation(currentGenre);
-      }
-  
-      // Processamento de navegação de plataforma
-      const currentPlatform = this.platformNavigationService.getCurrentPlatform();
-      if (currentPlatform) {
-        this.processPlatformNavigation(currentPlatform);
-      }
-  
-      // Carregamento inicial de jogos
-      if (!estadoRecuperado || this.games.length === 0) {
-        this.loadInitialGames().then(() => {
-          this.updateVisiblePages();
-          this.applyFilters(false);
-          this.setLoading(false);
-        });
-      } else {
-        this.updateVisiblePages();
-        this.applyFilters(false);
-        this.setLoading(false);
-      }
-      this.loadInitialGamesWithTransition(estadoRecuperado);
+    // Carregar tudo em uma única Promise
+    this.loadAllInitialData().then(() => {
+      this.setLoading(false);
+      this.transitioning = false;
     }).catch(error => {
       console.error('Erro ao carregar dados:', error);
       this.setLoading(false);
       this.transitioning = false;
     });
+  }
   
-    // Detecção de dispositivo móvel
-    this.detectMobile();
-    window.addEventListener('resize', () => this.detectMobile());
-    
-    // Salvar estado periodicamente
-    this.intervalSalvarEstado = setInterval(() => this.salvarEstadoNoLocal(), 5000);
+  private async loadAllInitialData() {
+    // Carregar gêneros e plataformas em paralelo
+    await Promise.all([
+      this.loadGenres(),
+      this.loadPlatforms()
+    ]);
+  
+    // Configuração de observables de busca
+    this.setupSearchSubscription();
+  
+    // Processamento de navegação de gênero e plataforma
+    const currentGenre = this.genreNavigationService.getCurrentGenre();
+    if (currentGenre) {
+      this.processGenreNavigation(currentGenre);
+    }
+  
+    const currentPlatform = this.platformNavigationService.getCurrentPlatform();
+    if (currentPlatform) {
+      this.processPlatformNavigation(currentPlatform);
+    }
+  
+    // Carregar jogos iniciais
+    await this.loadInitialGames();
+  
+    // Atualizar páginas e aplicar filtros
+    this.updateVisiblePages();
+    this.applyFilters(false);
   }
-  private loadInitialGamesWithTransition(estadoRecuperado: boolean) {
-    this.loadInitialGames().then(() => {
-      // Após carregar jogos, adicionar um pequeno delay
-      setTimeout(() => {
-        this.transitioning = false;  // Desativa transição
-        this.setLoading(false);
-      }, 300);  // Delay de 300ms para garantir transição suave
-    }).catch(error => {
-      console.error('Erro ao carregar jogos:', error);
-      this.transitioning = false;
-      this.setLoading(false);
-    });
-  }
+
   // Método para configurar assinatura de busca
   private setupSearchSubscription() {
     this.searchService.currentSearchTerm.pipe(
@@ -779,32 +756,37 @@ limparEstadoERecarregar() {
 
   private async loadInitialGames() {
     try {
-      this.transitioning = true;
-      // Reset normal mode pagination
+      // Reset de paginação
       this.completelyResetPagination('normal');
-      
       this.apiPage = 1;
+  
+      // Carregar jogos
       const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
-      this.games = response.games;
-      this.temMaisJogos = response.pagination.hasMore;
       
-      // Guarantee sorting is correctly applied
+      // Processar completamente os jogos antes de atribuir
+      this.games = response.games.map(game => {
+        // Qualquer processamento adicional de jogos
+        return {
+          ...game,
+          // Processamentos adicionais se necessário
+        };
+      });
+  
+      this.temMaisJogos = response.pagination.hasMore;
+  
+      // Aplicar filtros e ordenação
       if (this.sortBy === 'relevance') {
         this.filteredGames = [...this.games];
       } else {
         this.applyFilters(true);
       }
-      
-      // Force refresh pagination display
+  
+      // Atualizar páginas
       this.updateVisiblePages();
-      this.transitioning = false;
+  
     } catch (error) {
-      this.transitioning = false;
       console.error('Erro ao carregar jogos:', error);
       this.filteredGames = [];
-    } finally {
-      // Ensure loading is turned off
-      this.setLoading(false);
     }
   }
 
