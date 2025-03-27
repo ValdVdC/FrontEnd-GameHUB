@@ -415,9 +415,6 @@ section {
     #1a0d30 100%   /* Volta para tom similar ao de community */
   );
   color: #fff;
-  position: relative;
-  overflow: hidden;
-  padding: 80px 0;
 }
 .community-section{
   background: linear-gradient(

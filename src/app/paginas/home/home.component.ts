@@ -354,6 +354,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       this.observer.disconnect();
     }
     
+    // NOVO: Adicionar uma variável para a altura da navbar
+    const navbarHeight = 62; // Ajuste este valor para a altura real da sua navbar
+    
     // Função para calcular qual seção está mais visível na viewport
     const calcularSecaoMaisVisivel = () => {
       const viewportHeight = window.innerHeight;
@@ -367,7 +370,9 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
       
       sections.forEach(section => {
         const rect = section.getBoundingClientRect();
-        const sectionTop = scrollTop + rect.top;
+        
+        // MODIFICADO: Ajustar a posição considerando a altura da navbar
+        const sectionTop = scrollTop + rect.top - navbarHeight;
         const sectionBottom = sectionTop + rect.height;
         
         // Calcular quão próximo o meio da viewport está do meio da seção
