@@ -622,7 +622,6 @@ private getCurrentMode(): keyof PaginationStates {
       }, 800);
     });
   }
-
   ngOnDestroy() {
     if (this.loadingTimeout) {
       clearTimeout(this.loadingTimeout);
@@ -766,31 +765,28 @@ limparEstadoERecarregar() {
 
   private async loadInitialGames() {
     try {
-      // Adicionar flag para prevenir múltiplos carregamentos simultâneos
-      if (this.loading) return;
-  
-      // Reset de paginação com proteção
+      // Reset normal mode pagination
       this.completelyResetPagination('normal');
       
       this.apiPage = 1;
-      this.loading = true; // Definir loading antes da chamada
-      
       const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
-      
-      // Garantir que o estado esteja consistente
       this.games = response.games;
       this.temMaisJogos = response.pagination.hasMore;
       
-      // Aplicação de filtros otimizada
-      this.applyInitialFilters();
+      // Guarantee sorting is correctly applied
+      if (this.sortBy === 'relevance') {
+        this.filteredGames = [...this.games];
+      } else {
+        this.applyFilters(true);
+      }
       
-      // Atualização de paginação única
+      // Force refresh pagination display
       this.updateVisiblePages();
     } catch (error) {
       console.error('Erro ao carregar jogos:', error);
       this.filteredGames = [];
     } finally {
-      // Garantir que o loading seja desligado de forma controlada
+      // Ensure loading is turned off
       this.setLoading(false);
     }
   }
@@ -2188,43 +2184,60 @@ private eliminarDuplicatas() {
   // Reaplica os filtros para garantir o estado correto
   this.applyFilters(false);
 }
-private applyInitialFilters() {
-  // Lógica unificada de aplicação de filtros
-  if (this.sortBy === 'relevance') {
-    this.filteredGames = [...this.games];
-  } else {
-    // Aplicar filtros de forma otimizada
-    this.applyFilters(true);
-  }
-}
+
 private updateVisiblePages() {
-  // Versão otimizada com menos verificações redundantes
   const source = this.isSearchMode ? this.filteredSearchResults : this.filteredGames;
   const temJogos = source.length > 0;
   
-  // Condição simplificada para mostrar paginação
-  const shouldShowPagination = (temJogos || this.loading || this.carregandoMais) && 
-                                (this.temMaisJogos || this.currentPage > 1);
+  // Nova condição para verificar explicitamente se há resultados
+  const hasAnyResults = this.isSearchMode ? 
+    this.filteredSearchResults.length > 0 : 
+    this.filteredGames.length > 0;
 
-  this.shouldShowPagination = shouldShowPagination;
+  let hasMoreResults = false;
   
-  // Lógica de paginação mais compacta
+  if (this.isSearchMode && this.searchTerm) {
+      const termNormalizado = this.searchTerm.trim().toLowerCase();
+      const termState = this.getSearchTermState(termNormalizado);
+      hasMoreResults = termState.hasMore;
+  } else {
+      hasMoreResults = this.temMaisJogos;
+  }
+
+  // Atualizado para considerar resultados reais
+  const shouldShow = (hasAnyResults || this.loading || this.carregandoMais) && 
+                   (hasMoreResults || this.currentPage > 1 || hasAnyResults);
+
+  // Atualização imediata para evitar atrasos visuais
+  this.shouldShowPagination = shouldShow && hasAnyResults;
+  
+  // Se não houver jogos mas estamos carregando, ainda mostramos paginação
+  if (!temJogos && (this.loading || this.carregandoMais)) {
+      this.pagesToShow = [this.currentPage]; // Mostra a página atual
+      return;
+  }
+  
+  // Se realmente não há jogos e não estamos carregando, mostra apenas página 1
+  if (!temJogos && !this.loading && !this.carregandoMais) {
+      this.pagesToShow = [1];
+      return;
+  }
+
   const total = Math.max(this.totalPages, this.currentPage);
   const current = this.currentPage;
   const range = 1;
-  
-  let pages: (number | string)[] = [1];
-  
-  const start = Math.max(2, current - range);
-  const end = Math.min(total - 1, current + range);
+  let pages: (number | string)[] = [];
 
-  // Adicionar pontos de elipse com mais inteligência
+  pages.push(1);
+
+  let start = Math.max(2, current - range);
+  let end = Math.min(total - 1, current + range);
+
   if (start > 2) pages.push('...');
   for (let i = start; i <= end; i++) pages.push(i);
   if (end < total - 1) pages.push('...');
   if (total > 1) pages.push(total);
 
-  // Garantir que a página atual esteja sempre presente
   if (!pages.includes(current)) {
     pages = [...pages, current].sort((a, b) => {
       if (typeof a === 'string') return 1;
@@ -2235,9 +2248,18 @@ private updateVisiblePages() {
 
   this.pagesToShow = [...new Set(pages)];
   
-  // Lógica de desabilitação da seta de próxima página
-  this.disableNextArrow = this.currentPage === total && !this.temMaisJogos;
-}
+  // MODIFICADO: Usar o estado específico do termo atual para controlar a visibilidade da setinha
+  if (this.isSearchMode && this.searchTerm) {
+    const termNormalizado = this.searchTerm.trim().toLowerCase();
+    const termState = this.getSearchTermState(termNormalizado);
+    
+    // Desabilitar a setinha apenas quando estamos na última página E não há mais resultados para ESTE termo específico
+    this.disableNextArrow = this.currentPage === total && !termState.hasMore;
+  } else {
+    // Para o modo normal (não-busca), usar a lógica original
+    this.disableNextArrow = this.currentPage === total && !this.temMaisJogos;
+  }
+  }
 
   private async executarMudancaPagina(page: number) {
     const state = this.getCurrentPaginationState();
