@@ -305,9 +305,9 @@
         <!-- ============================================== 
              4. GRID DE JOGOS 
              ============================================== -->
-      <div class="games-grid" 
-          [class.loaded]="!loading && !transitioning && hasData"
-          [style.display]="(!loading && !transitioning && hasData) ? 'block' : 'none'">
+        <div class="games-grid" 
+        [class.loaded]="!loading && !transitioning"
+        *ngIf="hasSelectedGenres && pagedGames.length > 0">
           <div class="row">
             <div class="col-md-4 col-lg-3 mb-4" *ngFor="let game of pagedGames">
               <div class="game-card" (click)="detalhesJogo(game.id)">

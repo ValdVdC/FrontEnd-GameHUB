@@ -819,15 +819,10 @@
   transition: 
       opacity 0.2s ease-out,
       transform 0.2s ease-out,
-      margin-bottom 0.3s ease-out,
-      visibility 0.3s ease-out; 
+      margin-bottom 0.3s ease-out;
   margin-bottom: 0;
   visibility: hidden;
   display: none;
-  will-change: opacity, transform;
-  backface-visibility: hidden;
-  transform-style: preserve-3d;
-  pointer-events: none;
 }
 .games-grid.loaded {
   opacity: 1;
@@ -835,7 +830,6 @@
   margin-bottom: 80px;
   visibility: visible;
   display: block;
-  pointer-events: all; 
 }
 .loaded .game-card {
   opacity: 1;

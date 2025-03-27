@@ -6,7 +6,6 @@ import { Game } from '../../models/game.model';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
 import { SearchService } from '../../services/search.service';
 import { PlatformNavigationService } from '../../services/platform-navigation.service';
-import { ChangeDetectionStrategy } from '@angular/core';
 interface PaginationState {
   currentPage: number;
   totalPages: number;
@@ -36,9 +35,7 @@ interface SearchTermState {
 @Component({
   selector: 'app-explorador',
   templateUrl: './explorador.component.html',
-  styleUrl: './explorador.component.css',
-  changeDetection: ChangeDetectionStrategy.OnPush
-
+  styleUrl: './explorador.component.css'
 })
 
 export class ExploradorComponent {
@@ -796,18 +793,15 @@ limparEstadoERecarregar() {
   /* ==============================================
      7. CARREGAMENTO DE DADOS
   ============================================== */
-  hasData = false;
 
   private async loadInitialGames() {
     try {
-      this.hasData = false;
       // Reset normal mode pagination
       this.completelyResetPagination('normal');
       
       this.apiPage = 1;
       const response = await lastValueFrom(this.apiService.buscarJogos(this.apiPage));
       this.games = response.games;
-      this.hasData = this.games.length > 0;
       this.temMaisJogos = response.pagination.hasMore;
       
       // Guarantee sorting is correctly applied
@@ -823,8 +817,8 @@ limparEstadoERecarregar() {
       console.error('Erro ao carregar jogos:', error);
       this.filteredGames = [];
     } finally {
-        this.hasData = this.games.length > 0;
-        this.setLoading(false);
+      // Ensure loading is turned off
+      this.setLoading(false);
     }
   }
 
