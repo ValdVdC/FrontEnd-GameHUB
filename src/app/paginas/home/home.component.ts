@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { ApiResponse, Game, GenreCategory, PlatformCategory } from '../../models/game.model';
 import { lastValueFrom } from 'rxjs';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
+import { PlatformNavigationService } from '../../services/platform-navigation.service';
 
 @Component({
   selector: 'app-home',
@@ -42,7 +43,8 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     private apiService: ApiService, 
     private scrollService: ScrollService, 
     private router: Router,
-    private genreNavigationService: GenreNavigationService
+    private genreNavigationService: GenreNavigationService,
+    private platformNavigationService: PlatformNavigationService
   ) {}
 
   ngOnInit(): void {
@@ -324,6 +326,16 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     
     // Set the genre to navigate to
     this.genreNavigationService.navigateToGenre(genreName);
+    
+    // Navigate to the explorer page
+    this.router.navigate(['/explorador']);
+  }
+  navegarParaExploradorComPlataforma(platform: string | { name: string }) {
+    // Handle both string and object platform
+    const platformName = typeof platform === 'string' ? platform : platform.name;
+    
+    // Set the platform to navigate to
+    this.platformNavigationService.navigateToPlatform(platformName);
     
     // Navigate to the explorer page
     this.router.navigate(['/explorador']);

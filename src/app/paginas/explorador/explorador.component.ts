@@ -5,6 +5,7 @@ import { Router } from '@angular/router';
 import { Game } from '../../models/game.model';
 import { GenreNavigationService } from '../../services/genre-navigation.service';
 import { SearchService } from '../../services/search.service';
+import { PlatformNavigationService } from '../../services/platform-navigation.service';
 interface PaginationState {
   currentPage: number;
   totalPages: number;
@@ -414,7 +415,8 @@ private getCurrentMode(): keyof PaginationStates {
     private router: Router,
     private genreNavigationService: GenreNavigationService,
     private changeDetectorRef: ChangeDetectorRef,
-    private searchService: SearchService
+    private searchService: SearchService,
+    private platformNavigationService: PlatformNavigationService
   ) {
     this.searchSubject.pipe(
       debounceTime(450),
@@ -495,7 +497,7 @@ private getCurrentMode(): keyof PaginationStates {
                   resolve();
               }, 800);
           });
-
+          
           console.log('Gênero correspondente encontrado:', matchedGenre);
           
           // Marcar apenas o gênero correspondente
@@ -543,11 +545,106 @@ private getCurrentMode(): keyof PaginationStates {
       console.error('Erro ao carregar gêneros:', error);
       this.setLoading(false);
     });
+
     this.loadPlatforms().then(()=>{
       console.log('Platforms after loading:', this.platforms);
-    })
+      // Obter a plataforma atual que foi passado da navegação
+      const currentPlatform = this.platformNavigationService.getCurrentPlatform();
+      console.log('Current Platform from Service:', currentPlatform);
+      this.searchService.currentSearchTerm.pipe(
+        takeUntil(this.destroy$)
+      ).subscribe(term => {
+        if (term) {
+          this.searchTerm = term;
+          this.performSearch(term);
+        }
+      });
+      if (currentPlatform) {
+        console.log('Processando Plataforma navegada:', currentPlatform);
+        
+        // Reset de todas as plataformas
+        Object.keys(this.selectedPlatforms).forEach(key => {
+          this.selectedPlatforms[key] = false;
+        });
 
-    
+        this.allPlatformsSelected = false;
+        
+        // Desativar a opção de jogos sem plataforma
+        this.includeNoPlatform = false;
+        
+        // Verificação de correspondência de plataforma com tratamento case-insensitive
+        const matchedPlatform = this.platforms.find(
+          platform => platform.toLowerCase().trim() === currentPlatform.toLowerCase().trim()
+        );
+        
+        if (matchedPlatform) {
+          // Se não estiver no topo, faz o scroll suave
+          window.scrollTo({ 
+            top: 0, 
+            behavior: 'auto' 
+          });
+
+          // Espera até que o scroll chegue ao topo
+          new Promise<void>(resolve => {
+              let scrollCheckInterval = setInterval(() => {
+                  if (window.scrollY === 0) {
+                      clearInterval(scrollCheckInterval);
+                      resolve();
+                  }
+              }, 10);
+
+              // Timeout de segurança
+              setTimeout(() => {
+                  clearInterval(scrollCheckInterval);
+                  resolve();
+              }, 800);
+          });
+
+          console.log('Plataforma correspondente encontrado:', matchedPlatform);
+          
+          // Marcar apenas a plataforma correspondente
+          this.selectedPlatforms[matchedPlatform] = true;
+          this.toggleAdditionalFilters();
+          // Carregar jogos antes de aplicar filtros se necessário
+          if (this.games.length === 0) {
+            this.loadInitialGames().then(() => {
+              // Aplicar filtros após carregar jogos
+              this.applyFilters(true);
+              // Limpar a plataforma selecionado após processamento completo
+              this.platformNavigationService.clearSelectedPlatform();
+            });
+          } else {
+            // Aplicar filtros
+            this.applyFilters(true);
+            // Limpar a plataforma selecionado após processamento completo
+            this.platformNavigationService.clearSelectedPlatform();
+          }
+        } else {
+          console.warn('Nenhuma plataforma correspondente encontrado para:', currentPlatform);
+          console.warn('Plataformas disponíveis:', this.platforms);
+          // Limpar a plataforma selecionado se não for encontrado
+          this.platformNavigationService.clearSelectedPlatform();
+          
+          // Carregar jogos normalmente
+          if (!estadoRecuperado || this.games.length === 0) {
+            this.loadInitialGames();
+          }
+        }
+      } else {
+        // Carregar jogos normalmente se não houver plataforma selecionada
+        if (!estadoRecuperado || this.games.length === 0) {
+          this.loadInitialGames();
+        } else {
+          this.updateVisiblePages();
+          this.applyFilters(false);
+          this.setLoading(false);
+        }
+      }
+    }).catch(error => {
+      console.error('Erro ao carregar Plataformas:', error);
+      this.setLoading(false);
+    });
+
     this.detectMobile();
     window.addEventListener('resize', () => this.detectMobile());
     

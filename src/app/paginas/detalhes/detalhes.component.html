@@ -14,7 +14,7 @@
             <h3>{{info.name}}</h3>
           </div>
           <div class="game-card-category">
-            <h5 class="genre-badge" *ngFor="let genre of info.genres"> {{genre}}</h5>
+            <h5 class="genre-badge" *ngFor="let genre of info.genres" (click)="navegarParaExploradorComGenero(genre)"> {{genre}}</h5>
           </div>
           <div class="game-card-date_rating">                
             <div class="date">

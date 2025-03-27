@@ -1,9 +1,11 @@
 import { Component, OnDestroy, OnInit, ViewChild } from '@angular/core';
 import { ApiService } from '../../services/api.service';
-import { ActivatedRoute } from '@angular/router';
+import { ActivatedRoute, Router } from '@angular/router';
 import { Subject, takeUntil } from 'rxjs';
 import { NgbCarousel } from '@ng-bootstrap/ng-bootstrap';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { GenreNavigationService } from '../../services/genre-navigation.service';
+import { PlatformNavigationService } from '../../services/platform-navigation.service';
 
 @Component({
   selector: 'app-detalhes',
@@ -23,7 +25,9 @@ export class DetalhesComponent implements OnInit, OnDestroy {
   constructor(
     private apiService: ApiService, 
     private route: ActivatedRoute,
-    private sanitizer: DomSanitizer
+    private router: Router,
+    private genreNavigationService: GenreNavigationService,
+    private platformNavigationService: PlatformNavigationService
   ) {}
   
   ngOnInit(): void {
@@ -82,5 +86,25 @@ export class DetalhesComponent implements OnInit, OnDestroy {
   ngOnDestroy() {
     this.destroy$.next();
     this.destroy$.complete();
+  }
+  navegarParaExploradorComGenero(genre: string | { name: string }) {
+    // Handle both string and object genres
+    const genreName = typeof genre === 'string' ? genre : genre.name;
+    
+    // Set the genre to navigate to
+    this.genreNavigationService.navigateToGenre(genreName);
+    
+    // Navigate to the explorer page
+    this.router.navigate(['/explorador']);
+  }
+  navegarParaExploradorComPlataforma(platform: string | { name: string }) {
+    // Handle both string and object platform
+    const platformName = typeof platform === 'string' ? platform : platform.name;
+    
+    // Set the platform to navigate to
+    this.platformNavigationService.navigateToPlatform(platformName);
+    
+    // Navigate to the explorer page
+    this.router.navigate(['/explorador']);
   }
 }
