@@ -963,10 +963,6 @@ section {
   transition: color 0.3s ease;
 }
 
-.platform-game-item:hover .game-info h5 {
-  color: #74efff;
-}
-
 .mini-rating {
   font-size: 0.75rem;
   display: flex;
@@ -1138,8 +1134,8 @@ section {
 
 /* Nintendo - Tema Vermelho e Azul */
 .platform-nintendo {
-  background: linear-gradient(145deg, #8b0000, #cc0000);
-  border-color: rgba(230, 0, 18, 0.3);
+  background: linear-gradient(145deg, #770000, #9e0000);
+  border-color: rgba(235, 5, 24, 0.3);
 }
 
 .platform-icon-nintendo {
