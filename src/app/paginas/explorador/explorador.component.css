@@ -146,6 +146,7 @@
   width: 100%;
   min-height: 50px;
   transition: min-height 0.3s ease-in-out;
+  z-index: 1;
 }
 
 .additional-filters-toggle {
@@ -199,6 +200,8 @@
   opacity: 1;
   padding: 15px;
   background: transparent;
+  z-index: 5;
+  position: relative;
 }
 .additional-filters-dropdown.closed {
   max-height: 300px;
@@ -298,6 +301,7 @@
 .genre-checkboxes-dropdown.open {
   max-height: 300px;
   opacity: 1;
+  z-index: 4;
 }
 
 /* Modificar o comportamento do hover para incluir a sidebar */
@@ -635,6 +639,7 @@
 .sort-options-dropdown.open {
   max-height: 300px;
   opacity: 1;
+  z-index: 3;
 }
 
 .option-item {
@@ -709,27 +714,31 @@
    6. ESTILO DO DROPDOWN DE PLATAFORMAS
 ============================================== */
 
-.platform-filter-container {
+.dropdown-filter-container {
   position: relative;
   z-index: 2;
   display: block;
   width: 100%;
 }
 
-.platform-dropdown-container {
+.dropdown-container {
   position: relative;
   width: 100%;
   transition: opacity 0.3s ease-in-out;
   opacity: 0;
 }
 
-.platform-dropdown {
+.additional-filters-dropdown.open .dropdown-container {
+  opacity: 1;
+}
+
+.custom-dropdown {
   position: relative;
   padding-left: 0;
   width: 100%;
 }
 
-.platform-checkboxes-dropdown {
+.checkboxes-dropdown {
   position: absolute;
   top: 100%;
   left: 0;
@@ -748,32 +757,34 @@
   visibility: hidden;
 }
 
-.platform-checkboxes-dropdown.open {
+.checkboxes-dropdown.open {
   max-height: 300px;
   opacity: 1;
   visibility: visible;
+  overflow-y: auto; /* Importante para garantir o scroll */
+  z-index: 4;
 }
 
-.platform-checkboxes {
+.checkboxes-list {
   display: flex;
   flex-direction: column;
+  padding: 6px 0;
 }
 
-.platform-checkboxes-dropdown::-webkit-scrollbar {
+.checkboxes-dropdown::-webkit-scrollbar {
   width: 6px;
 }
 
-.platform-checkboxes-dropdown::-webkit-scrollbar-thumb {
+.checkboxes-dropdown::-webkit-scrollbar-thumb {
   background: #74efff;
   border-radius: 4px;
 }
 
-.platform-dropdown .dropdown-control.expanded .platform-checkboxes-dropdown {
+.dropdown-control.expanded .checkboxes-dropdown {
   max-height: 300px;
-  overflow-y: auto;
 }
 
-.option-platform {
+.option-item {
   display: flex;
   align-items: center;
   padding: 12px 12px;
@@ -783,30 +794,38 @@
   transition: background-color 0.3s ease;
 }
 
-.option-platform:hover {
+.option-item:hover {
   background-color: rgba(116, 239, 255, 0.1);
 }
 
-.special-platform {
+.special-option {
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   padding-bottom: 8px;
   margin-bottom: 8px;
 }
 
-.platform-filter-container .form-check-label {
+.dropdown-filter-container .form-check-label {
   color: white;
   transition: color 0.3s ease;
   user-select: none;
 }
 
-.platform-filter-container .form-check-input:checked + .form-check-label {
+.dropdown-filter-container .form-check-input:checked + .form-check-label {
   color: #74efff;
 }
 
-.option-platform .form-check-label {
+.option-item .form-check-label {
   padding-right: 24px;
   align-items: center;
   margin-left: -4px;
+}
+.filter-group.custom-filter {
+  position: relative;
+  z-index: 2;
+}
+
+.filter-group.custom-filter:hover {
+  z-index: 6;
 }
 
 /* ==============================================
@@ -1571,6 +1590,7 @@ h3 {
   /* Garante que o dropdown de checkboxes tem margem inferior suficiente */
   .genre-checkboxes-dropdown.open {
     padding-bottom: 60px; /* Espaço para a barra inferior */
+    z-index: 50;
   }
   .pagination-container{
     width: 90%;

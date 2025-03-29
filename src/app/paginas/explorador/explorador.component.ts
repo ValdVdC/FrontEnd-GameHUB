@@ -47,8 +47,12 @@ export class ExploradorComponent {
   filteredGames: Game[] = [];
   genres: string[] = [];
   platforms: string[] = [];
+  themes: string[] = [];
+  gameModes: string [] = [];
   genresLoaded = false;
   platformsLoaded = false;
+  themesLoaded = false;
+  gameModesLoaded = false;
   loading: boolean = false;
   private loadingStartTime: number | null = null;
   private loadingTimeout: any = null;
@@ -205,6 +209,8 @@ export class ExploradorComponent {
   // Filtros
   selectedGenres: { [key: string]: boolean } = {};
   selectedPlatforms: { [key: string]: boolean } = {};
+  selectedThemes : { [key: string]: boolean } = {};
+  selectedGameModes : { [key: string]: boolean } = {};
   selectedRating: string = '';
   sortBy: string = 'relevance';
   genreFilterMode: 'inclusive' | 'exclusive' = 'inclusive';
@@ -440,6 +446,7 @@ private getCurrentMode(): keyof PaginationStates {
     this.setLoading(true);
     this.preLoading = true;
     this.transitioning = true;
+    this.detectMobile();
   
     // Carregar tudo em uma única Promise
     this.loadAllInitialData().then(() => {
@@ -456,7 +463,9 @@ private getCurrentMode(): keyof PaginationStates {
     // Carregar gêneros e plataformas em paralelo
     await Promise.all([
       this.loadGenres(),
-      this.loadPlatforms()
+      this.loadPlatforms(),
+      this.loadThemes(),
+      this.loadGameModes()
     ]);
   
     // Configuração de observables de busca
@@ -640,6 +649,8 @@ private getCurrentMode(): keyof PaginationStates {
             genreFilterMode: this.genreFilterMode,
             selectedRating: this.selectedRating,
             selectedPlatforms: this.selectedPlatforms,
+            selectedThemes: this.selectedThemes,
+            selectedGameModes: this.selectedGameModes,
             sortBy: this.sortBy,
             isSearchMode: this.isSearchMode,
             searchTerm: this.searchTerm,
@@ -700,9 +711,11 @@ private recuperarEstadoDoLocal() {
                 this.temMaisJogos = estado.temMaisJogos;
                 this.currentPage = estado.currentPage;
                 this.selectedGenres = estado.selectedGenres;
+                this.selectedPlatforms = estado.selectedPlatforms;
                 this.genreFilterMode = estado.genreFilterMode;
                 this.selectedRating = estado.selectedRating;
-                this.selectedPlatforms = estado.selectedPlatforms;
+                this.selectedThemes = estado.selectedThemes;
+                this.selectedGameModes = estado.selectedGameModes;
                 this.sortBy = estado.sortBy;
                 this.searchTerm = estado.searchTerm;
                 this.searchResults = estado.searchResults;
@@ -772,7 +785,6 @@ limparEstadoERecarregar() {
           // Processamentos adicionais se necessário
         };
       });
-  
       this.temMaisJogos = response.pagination.hasMore;
   
       // Aplicar filtros e ordenação
@@ -1445,7 +1457,21 @@ limparEstadoERecarregar() {
           this.setLoading(false); // Use o método setLoading para gerenciar corretamente
           this.showNoPlatformsMessage = true; // Adicione esta propriedade no componente
           return;
-      }
+        }
+        if (!this.hasSelectedThemes) {
+          this.filteredGames = [];
+          this.updateVisiblePages();
+          this.setLoading(false); // Use o método setLoading para gerenciar corretamente
+          this.showNoThemesMessage = true; // Adicione esta propriedade no componente
+          return;
+        }
+        if (!this.hasSelectedGameModes) {
+          this.filteredGames = [];
+          this.updateVisiblePages();
+          this.setLoading(false); // Use o método setLoading para gerenciar corretamente
+          this.showNoGameModesMessage = true; // Adicione esta propriedade no componente
+          return;
+        }
         // Ativa o loading
         this.loading = true
 
@@ -1453,6 +1479,8 @@ limparEstadoERecarregar() {
         let filtered = this.filterByGenres([...this.games]);
         filtered = this.filterByRating(filtered);
         filtered = this.filterByPlatforms(filtered); 
+        filtered = this.filterByThemes(filtered); 
+        filtered = this.filterByGameModes(filtered); 
 
         // Aplica a ordenação
         if (this.sortBy !== 'relevance') {
@@ -1479,6 +1507,8 @@ limparEstadoERecarregar() {
                 filtered = this.filterByGenres([...this.games]);
                 filtered = this.filterByRating(filtered);
                 filtered = this.filterByPlatforms(filtered); 
+                filtered = this.filterByThemes(filtered); 
+                filtered = this.filterByGameModes(filtered); 
                 filtered = this.sortGames(filtered);
 
                 // Se não conseguimos novos jogos após o carregamento
@@ -1505,6 +1535,8 @@ limparEstadoERecarregar() {
                 filtered = this.filterByGenres([...this.games]);
                 filtered = this.filterByRating(filtered);
                 filtered = this.filterByPlatforms(filtered); 
+                filtered = this.filterByThemes(filtered); 
+                filtered = this.filterByGameModes(filtered); 
                 filtered = this.sortGames(filtered);
             }
         }
@@ -1531,11 +1563,11 @@ private async applySearchFilters(resetPage: boolean = true) {
     if (this.searchResults.length === 0 && this.searchTerm) {
       return; 
     }
-    console.log('Resultados de busca:', this.searchResults);
-    console.log('Primeiro jogo (plataformas):', this.searchResults[0]?.platforms);
     let filtered = this.filterByGenres([...this.searchResults]);
     filtered = this.filterByRating(filtered);
-    filtered = this.filterByPlatforms(filtered);  // Filtro de plataformas adicionado aqui
+    filtered = this.filterByPlatforms(filtered);
+    filtered = this.filterByThemes(filtered); 
+    filtered = this.filterByGameModes(filtered); 
     
     // Aplicar ordenação
     filtered = this.sortGames(filtered);
@@ -1559,6 +1591,8 @@ private async applySearchFilters(resetPage: boolean = true) {
       filtered = this.filterByGenres([...this.searchResults]);
       filtered = this.filterByRating(filtered);
       filtered = this.filterByPlatforms(filtered);
+      filtered = this.filterByThemes(filtered); 
+      filtered = this.filterByGameModes(filtered); 
       filtered = this.sortGames(filtered);
       this.filteredSearchResults = filtered;
       attempts++;
@@ -2763,4 +2797,261 @@ updateAllSelected() {
       return Object.values(this.selectedPlatforms).some(v => v) || this.includeNoPlatform;
   }
 
+  /* ==============================================
+     17. Gestão de temas
+  ============================================== */
+
+    // Carregar temas de forma mais eficiente
+    private async loadThemes() {
+      try {
+        const response = await lastValueFrom(this.apiService.buscarTemas());
+        
+        // Verificar estrutura da resposta e ajustar o mapeamento
+        this.themes = response.map((t: any) => t.value?.theme || t.name).filter(Boolean);
+        
+        // Inicializar seleção com verificação de null/undefined
+        this.themes.forEach(theme => {
+          if (this.selectedThemes[theme] === undefined) {
+            this.selectedThemes[theme] = true; // Valor padrão apenas se não existir
+          }
+        });
+    
+        this.themesLoaded = true;
+        this.applyFilters(false); // Aplicar filtros após carregar
+      } catch (error) {
+        console.error('Erro ao carregar temas:', error);
+        this.themesLoaded = true;
+      }
+    }
+  
+    includeNoTheme:boolean = true
+    allThemesSelected: boolean = true;
+  
+    // Novo método para alternar todas os temas
+    toggleAllThemes() {
+      // Se todos estiverem selecionados, desmarcar tudo
+      if (this.allThemesSelected) {
+        this.allThemesSelected = false;
+        this.themes.forEach(theme => {
+          this.selectedThemes[theme] = false;
+        });
+        this.includeNoTheme = false;
+      } else {
+        // Se alguns estiverem desmarcados, marcar tudo
+        this.allThemesSelected = true;
+        this.themes.forEach(theme => {
+          this.selectedThemes[theme] = true;
+        });
+        this.includeNoTheme = true;
+      }
+      
+      this.onThemeChange();
+    }
+    toggleTheme(theme: string) {
+      this.selectedThemes[theme] = !this.selectedThemes[theme];
+      this.updateAllThemesCheckbox();
+      this.onThemeChange();
+    }
+    toggleNoTheme() {
+      this.includeNoTheme = !this.includeNoTheme;
+      this.updateAllThemesCheckbox();
+      this.onThemeChange();
+    }
+    updateAllThemesCheckbox() {
+      // Verifica se todos os checkboxes individuais estão marcados
+      this.allThemesSelected = this.themes.every(theme => 
+        this.selectedThemes[theme]
+      ) && this.includeNoTheme;
+    }
+    // Método otimizado para filtrar por temas
+    private filterByThemes(games: Game[]): Game[] {
+      // Verificar se nenhum tema está selecionado
+      if (!this.hasSelectedThemes) {
+        return [];
+      }
+    
+      const selectedThemesList = Object.entries(this.selectedThemes)
+        .filter(([_, selected]) => selected)
+        .map(([theme]) => theme);
+      
+      return games.filter(game => {
+        // Tratar jogos sem tema como caso especial
+        if (!game.themes || game.themes.length === 0) {
+          return this.includeNoTheme;
+        }
+        
+        // Se nenhum tema está selecionado, apenas tratar jogos com tema
+        if (selectedThemesList.length === 0) {
+          return false;
+        }
+        
+        // Normalizar temas (caso sejam objetos)
+        const gameThemes = Array.isArray(game.themes) 
+          ? (typeof game.themes[0] === 'object' && game.themes[0] !== null
+            ? game.themes.map((t: any) => t.name)
+            : game.themes)
+          : [game.themes];
+        
+        // Verificar correspondência direta com os temas selecionados
+        return selectedThemesList.some(selectedTheme => {
+            // Verificar correspondência direta de nome
+            return gameThemes.some(themeName => 
+              String(themeName).toLowerCase() === selectedTheme.toLowerCase()
+            );
+        });
+      });
+    }
+
+    // Melhorar manipulação de eventos
+    onThemeChange() {
+      // Resetar para primeira página
+      this.currentPage = 1;
+      
+      // Atualizar o estado do checkbox "Todos os temas"
+      this.updateAllThemesCheckbox();
+      
+      // Aplicar filtros de acordo com o modo atual
+      if (this.isSearchMode) {
+        this.applySearchFilters(true);
+      } else {
+        this.applyFilters(true);
+      }
+    }
+  
+    // Método getter simplificado
+    showNoThemesMessage: boolean = false;
+  
+  // Método para verificar temas
+    get hasSelectedThemes(): boolean {
+        return Object.values(this.selectedThemes).some(v => v) || this.includeNoTheme;
+    }
+
+  /* ==============================================
+     18. Gestão de modos de jogo
+  ============================================== */   
+  
+    // Carregar modos de jogo de forma mais eficiente
+    private async loadGameModes() {
+      try {
+        const response = await lastValueFrom(this.apiService.buscarModosdeJogo());
+        // Verificar estrutura da resposta e ajustar o mapeamento
+        this.gameModes = response.map((t: any) => t.value?.game_mode || t.name).filter(Boolean);
+        
+        // Inicializar seleção com verificação de null/undefined
+        this.gameModes.forEach(gameMode => {
+          if (this.selectedGameModes[gameMode] === undefined) {
+            this.selectedGameModes[gameMode] = true; // Valor padrão apenas se não existir
+          }
+        });
+    
+        this.gameModesLoaded = true;
+        this.applyFilters(false); // Aplicar filtros após carregar
+      } catch (error) {
+        console.error('Erro ao carregar modos de jogo:', error);
+        this.gameModesLoaded = true;
+      }
+      
+    }
+  
+    includeNoGameMode:boolean = true
+    allGameModesSelected: boolean = true;
+  
+    // Novo método para alternar todas os modos de jogo
+    toggleAllGameModes() {
+      // Se todos estiverem selecionados, desmarcar tudo
+      if (this.allGameModesSelected) {
+        this.allGameModesSelected = false;
+        this.gameModes.forEach(gameMode => {
+          this.selectedGameModes[gameMode] = false;
+        });
+        this.includeNoGameMode = false;
+      } else {
+        // Se alguns estiverem desmarcados, marcar tudo
+        this.allGameModesSelected = true;
+        this.gameModes.forEach(gameMode => {
+          this.selectedGameModes[gameMode] = true;
+        });
+        this.includeNoGameMode = true;
+      }
+      
+      this.onGameModeChange();
+    }
+    toggleGameMode(gameMode: string) {
+      this.selectedGameModes[gameMode] = !this.selectedGameModes[gameMode];
+      this.updateAllGameModesCheckbox();
+      this.onGameModeChange();
+    }
+    toggleNoGameMode() {
+      this.includeNoGameMode = !this.includeNoGameMode;
+      this.updateAllGameModesCheckbox();
+      this.onGameModeChange();
+    }
+    updateAllGameModesCheckbox() {
+      // Verifica se todos os checkboxes individuais estão marcados
+      this.allGameModesSelected = this.gameModes.every(gameMode => 
+        this.selectedGameModes[gameMode]
+      ) && this.includeNoGameMode;
+    }
+    // Método otimizado para filtrar por modo de jogo
+    private filterByGameModes(games: Game[]): Game[] {
+      // Verificar se nenhum modo de jogo está selecionado
+      if (!this.hasSelectedGameModes) {
+        return [];
+      }
+    
+      const selectedGameModesList = Object.entries(this.selectedGameModes)
+        .filter(([_, selected]) => selected)
+        .map(([game_modes]) => game_modes);
+      
+      return games.filter(game => {
+        // Tratar jogos sem modo de jogo como caso especial
+        if (!game.game_modes || game.game_modes.length === 0) {
+          return this.includeNoGameMode;
+        }
+        
+        // Se nenhum modo de jogo está selecionado, apenas tratar jogos com modo de jogo
+        if (selectedGameModesList.length === 0) {
+          return false;
+        }
+        
+        // Normalizar modos de jogo (caso sejam objetos)
+        const gameGameModes = Array.isArray(game.game_modes) 
+          ? (typeof game.game_modes[0] === 'object' && game.game_modes[0] !== null
+            ? game.game_modes.map((t: any) => t.name)
+            : game.game_modes)
+          : [game.game_modes];
+        
+        // Verificar correspondência direta com os modos de jogo selecionados
+        return selectedGameModesList.some(selectedGameMode => {
+            // Verificar correspondência direta de nome
+            return gameGameModes.some(gameModeName => 
+              String(gameModeName).toLowerCase() === selectedGameMode.toLowerCase()
+            );
+        });
+      });
+    }
+
+    // Melhorar manipulação de eventos
+    onGameModeChange() {
+      // Resetar para primeira página
+      this.currentPage = 1;
+      
+      // Atualizar o estado do checkbox "Todos os modos de jogo"
+      this.updateAllGameModesCheckbox();
+      
+      // Aplicar filtros de acordo com o modo atual
+      if (this.isSearchMode) {
+        this.applySearchFilters(true);
+      } else {
+        this.applyFilters(true);
+      }
+    }
+  
+    // Método getter simplificado
+    showNoGameModesMessage: boolean = false;
+  
+  // Método para verificar modos de jogo
+    get hasSelectedGameModes(): boolean {
+        return Object.values(this.selectedGameModes).some(v => v) || this.includeNoGameMode;
+    }
 }

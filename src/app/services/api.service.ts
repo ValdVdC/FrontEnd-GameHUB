@@ -35,6 +35,12 @@ export class ApiService {
   buscarPlataformas(): Observable<any[]> {
     return this.http.get<any[]>(`${this.apiUrl}/platforms`);
   }
+  buscarTemas(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/themes`);
+  }
+  buscarModosdeJogo(): Observable<any[]> {
+    return this.http.get<any[]>(`${this.apiUrl}/game-modes`);
+  }
   getJogoDetalhes(id:number):Observable<any>{
     return this.http.get(`${this.apiUrl}/${id}`)
   }

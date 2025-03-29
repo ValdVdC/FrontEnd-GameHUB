@@ -6,6 +6,8 @@ export interface Game {
     total_rating?: number;
     popularity_value?:number;
     platforms?: string[];
+    themes?: string[];
+    game_modes?:string[];
   }
   
   export interface ApiResponse {

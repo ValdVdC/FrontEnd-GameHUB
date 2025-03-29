@@ -190,12 +190,13 @@
               
               <div class="additional-filters-dropdown" [class.open]="isAdditionalFiltersOpen">
                 <div class="additional-filters-content">
-                  <div class="filter-group platform-filter-container custom-filter">
+
+                  <div class="filter-group dropdown-filter-container custom-filter">
                     <div class="filter-header">
                       <label>Plataformas</label>
                     </div>
-                    <div class="platform-dropdown-container">
-                      <div class="platform-dropdown"
+                    <div class="dropdown-container">
+                      <div class="custom-dropdown"
                         (mouseenter)="!isMobile && openDropdown('platform')"
                         (mouseleave)="!isMobile && closeDropdown('platform')"
                         (click)="isMobile && toggleDropdown('platform')">
@@ -206,7 +207,6 @@
                               type="checkbox" 
                               id="select-all-platforms"
                               [checked]="allPlatformsSelected"
-
                               class="form-check-input"> 
                             <label for="select-all-platforms" class="form-check-label">
                               <span class="custom-checkbox"></span>
@@ -217,10 +217,10 @@
                             <span class="dropdown-arrow" (click)="isMobile && toggleDropdown('platform')"></span>
                           </div>
                           
-                          <div class="platform-checkboxes-dropdown" 
+                          <div class="checkboxes-dropdown" 
                             [class.open]="activeDropdown === 'platform'" 
                             [class.closed]="activeDropdown !== 'platform'">
-                            <div class="form-check option-platform special-platform"
+                            <div class="form-check option-item special-option"
                                 (click)="toggleNoPlatform()">
                                 <input type="checkbox" 
                                   id="platform-none" 
@@ -232,10 +232,10 @@
                                     <i class="bi bi-dash-circle"></i> Sem plataforma
                                   </span>
                                 </label>
-                             </div>
-                            <div class="platform-checkboxes">
+                            </div>
+                            <div class="checkboxes-list">
                               <div *ngFor="let platform of platforms" 
-                                class="form-check option-platform"
+                                class="form-check option-item"
                                 (click)="togglePlatform(platform)">
                                 <input type="checkbox" 
                                   [id]="'platform-' + platform"
@@ -251,15 +251,135 @@
                         </div>
                       </div>
                     </div>
-                  </div>                
-                  <div class="filter-group placeholder-filter">
-                    <label></label>
-                    <!-- Dropdown or input components can be added here -->
+                  </div>  
+
+                  <!-- Dropdown de Temas -->
+                  <div class="filter-group dropdown-filter-container custom-filter">
+                    <div class="filter-header">
+                      <label>Temas</label>
+                    </div>
+                    <div class="dropdown-container">
+                      <div class="custom-dropdown"
+                        (mouseenter)="!isMobile && openDropdown('theme')"
+                        (mouseleave)="!isMobile && closeDropdown('theme')"
+                        (click)="isMobile && toggleDropdown('theme')">
+                        
+                        <div class="dropdown-control" [class.expanded]="activeDropdown === 'theme'">
+                          <div class="form-check select-all" (click)="$event.stopPropagation()" (change)="toggleAllThemes()">
+                            <input 
+                              type="checkbox" 
+                              id="select-all-themes"
+                              [checked]="allThemesSelected"
+                              class="form-check-input"> 
+                            <label for="select-all-themes" class="form-check-label">
+                              <span class="custom-checkbox"></span>
+                              <span class="selected-text">
+                                Todos os Temas
+                              </span>
+                            </label>
+                            <span class="dropdown-arrow" (click)="isMobile && toggleDropdown('theme')"></span>
+                          </div>
+                          
+                          <div class="checkboxes-dropdown" 
+                            [class.open]="activeDropdown === 'theme'" 
+                            [class.closed]="activeDropdown !== 'theme'">
+                            <div class="form-check option-item special-option"
+                                (click)="toggleNoTheme()">
+                                <input type="checkbox" 
+                                  id="theme-none" 
+                                  [checked]="includeNoTheme"
+                                  class="form-check-input">
+                                <label for="theme-none" class="form-check-label">
+                                  <span class="custom-checkbox"></span>
+                                  <span class="label-text">
+                                    <i class="bi bi-dash-circle"></i> Sem tema
+                                  </span>
+                                </label>
+                            </div>
+                            <div class="checkboxes-list">
+                              <div *ngFor="let theme of themes" 
+                                class="form-check option-item"
+                                (click)="toggleTheme(theme)">
+                                <input type="checkbox" 
+                                  [id]="'theme-' + theme"
+                                  [checked]="selectedThemes[theme]"
+                                  class="form-check-input">
+                                <label [for]="'theme-' + theme" class="form-check-label">
+                                  <span class="custom-checkbox"></span>
+                                  <span class="label-text">{{theme}}</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
-                  <div class="filter-group placeholder-filter">
-                    <label></label>
-                    <!-- Dropdown or input components can be added here -->
+
+                  
+                  <!-- Dropdown de Modos de Jogo -->
+                  <div class="filter-group dropdown-filter-container custom-filter">
+                    <div class="filter-header">
+                      <label>Modos de Jogo</label>
+                    </div>
+                    <div class="dropdown-container">
+                      <div class="custom-dropdown"
+                        (mouseenter)="!isMobile && openDropdown('game_mode')"
+                        (mouseleave)="!isMobile && closeDropdown('game_mode')"
+                        (click)="isMobile && toggleDropdown('game_mode')">
+                        
+                        <div class="dropdown-control" [class.expanded]="activeDropdown === 'game_mode'">
+                          <div class="form-check select-all" (click)="$event.stopPropagation()" (change)="toggleAllGameModes()">
+                            <input 
+                              type="checkbox" 
+                              id="select-all-game_modes"
+                              [checked]="allGameModesSelected"
+                              class="form-check-input"> 
+                            <label for="select-all-game_modes" class="form-check-label">
+                              <span class="custom-checkbox"></span>
+                              <span class="selected-text">
+                                Todos os Modos de Jogo
+                              </span>
+                            </label>
+                            <span class="dropdown-arrow" (click)="isMobile && toggleDropdown('game_mode')"></span>
+                          </div>
+                          
+                          <div class="checkboxes-dropdown" 
+                            [class.open]="activeDropdown === 'game_mode'" 
+                            [class.closed]="activeDropdown !== 'game_mode'">
+                            <div class="form-check option-item special-option"
+                                (click)="toggleNoGameMode()">
+                                <input type="checkbox" 
+                                  id="game_mode-none" 
+                                  [checked]="includeNoGameMode"
+                                  class="form-check-input">
+                                <label for="game_mode-none" class="form-check-label">
+                                  <span class="custom-checkbox"></span>
+                                  <span class="label-text">
+                                    <i class="bi bi-dash-circle"></i> Sem Modo de Jogo
+                                  </span>
+                                </label>
+                            </div>
+                            <div class="checkboxes-list">
+                              <div *ngFor="let game_mode of gameModes" 
+                                class="form-check option-item"
+                                (click)="toggleGameMode(game_mode)">
+                                <input type="checkbox" 
+                                  [id]="'game_mode-' + game_mode"
+                                  [checked]="selectedGameModes[game_mode]"
+                                  class="form-check-input">
+                                <label [for]="'game_mode-' + game_mode" class="form-check-label">
+                                  <span class="custom-checkbox"></span>
+                                  <span class="label-text">{{game_mode}}</span>
+                                </label>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
                   </div>
+
                 </div>
               </div>
             </div>
@@ -412,7 +532,7 @@
               </ul>
              </div>
              <!-- Caso 2: Modo normal (sem busca) mas sem jogos com os filtros atuais -->
-             <div *ngIf="hasSelectedGenres && hasSelectedPlatforms && !isSearchMode && games.length > 0" class="no-results-message">
+             <div *ngIf="hasSelectedGenres && hasSelectedPlatforms && !isSearchMode && hasSelectedGameModes && hasSelectedThemes && games.length > 0" class="no-results-message">
                  <h4>Nenhum jogo encontrado</h4>
                  <p>Os filtros atuais estão limitando muito os resultados. Tente:</p>
                  <ul class="suggestions-list">
@@ -466,6 +586,28 @@
               <div class="action-buttons">
                   <button class="btn btn-neon" (click)="toggleAllPlatforms()">
                       Selecionar Todas as Plataformas
+                  </button>
+              </div>
+            </div>
+             <!-- Caso 6: Nenhum tema selecionado -->
+             <div *ngIf="themesLoaded && !loading && !hasSelectedThemes" class="no-results-message">
+              <i class="bi bi-filter-circle"></i>
+              <h4>Filtros limitando resultados</h4>
+              <p>Selecione pelo menos um tema para visualizar os jogos</p>
+              <div class="action-buttons">
+                  <button class="btn btn-neon" (click)="toggleAllThemes()">
+                      Selecionar Todas os temas
+                  </button>
+              </div>
+            </div>
+             <!-- Caso 7: Nenhum modo de jogo selecionado -->
+             <div *ngIf="gameModesLoaded && !loading && !hasSelectedGameModes" class="no-results-message">
+              <i class="bi bi-filter-circle"></i>
+              <h4>Filtros limitando resultados</h4>
+              <p>Selecione pelo menos uma modo de jogo para visualizar os jogos</p>
+              <div class="action-buttons">
+                  <button class="btn btn-neon" (click)="toggleAllGameModes()">
+                      Selecionar Todas os Modos de Jogos
                   </button>
               </div>
             </div>
