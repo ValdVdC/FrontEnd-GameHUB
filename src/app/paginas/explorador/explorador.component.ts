@@ -1707,7 +1707,7 @@ private sortGames(games: any[]): any[] {
 }
 
   get allGenresSelected(): boolean {
-    return Object.values(this.selectedGenres).every(value => value);
+    return Object.values(this.selectedGenres).every(value => value) && this.includeNoGenre;
   }
 
   get hasAnyGenreSelected(): boolean {
@@ -1914,7 +1914,8 @@ toggleAllGenres() {
   state.hasMorePages = true;
 
   this.genres.forEach(genre => this.selectedGenres[genre] = newState);
-
+  
+  this.includeNoGenre = newState;
   // Se estiver desativando todos os gêneros, verifica se tem jogos sem gênero
   if (!newState) {
     if (this.includeNoGenre) {
