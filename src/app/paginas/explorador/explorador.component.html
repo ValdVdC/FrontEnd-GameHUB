@@ -506,7 +506,7 @@
              
              <!-- Ícones diferentes para diferentes casos -->
              <i class="bi bi-emoji-frown" *ngIf="hasSelectedGenres && 
-                  hasSelectedPlatforms &&
+                  hasSelectedPlatforms && hasSelectedThemes && hasSelectedGameModes && 
                  ((isSearchMode && searchResults.length > 0) || 
                  (!isSearchMode && games.length > 0))"></i>
              <i class="bi bi-filter-circle" *ngIf="!hasSelectedGenres"></i>

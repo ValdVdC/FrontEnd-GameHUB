@@ -711,7 +711,7 @@
 }
 
 /* ==============================================
-   6. ESTILO DO DROPDOWN DE PLATAFORMAS
+   6. ESTILO DO DROPDOWN DOS FILTROS ADICIONAIS
 ============================================== */
 
 .dropdown-filter-container {
@@ -826,6 +826,18 @@
 
 .filter-group.custom-filter:hover {
   z-index: 6;
+}
+/* Estilos para responsividade - filtros adicionais em mobile */
+.additional-filters-content {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 15px;
+}
+
+/* Por padrão, os filtros ocupam uma porção do espaço disponível */
+.additional-filters-content .filter-group {
+  flex: 1 1 calc(33.333% - 15px);
+  min-width: 200px;
 }
 
 /* ==============================================
@@ -1603,6 +1615,32 @@ h3 {
   .no-results {
     padding: 1.5rem;
     margin: 2rem auto;
+  }
+  .additional-filters-content {
+    flex-direction: column;
+  }
+  
+  .additional-filters-content .filter-group {
+    flex: 0 0 100%;
+    width: 100%;
+    margin-bottom: 15px;
+  }
+  
+  .dropdown-control {
+    width: 100%;
+  }
+}
+@media screen and (max-width: 480px) {
+  .additional-filters-content {
+    padding: 10px 0;
+  }
+  
+  .filter-header label {
+    font-size: 14px;
+  }
+  
+  .option-item {
+    padding: 10px 8px;
   }
 }
 @media (min-width: 769px) and (max-width: 1399px) {
