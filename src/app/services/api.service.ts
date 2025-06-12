@@ -8,9 +8,12 @@ import { ApiResponse, GenreCategory } from '../models/game.model';
   providedIn: 'root'
 })
 export class ApiService {
-  private apiUrl = environment.API_URL
+
+  private baseUrl = environment.API_URL.replace('/api/games', '/api');
+  private gamesUrl = environment.API_URL;
   
   constructor(private http: HttpClient) {}
+  
   buscarJogos(
     pagina: number = 1,
     quantidade: number = 500,
@@ -27,29 +30,40 @@ export class ApiService {
       params = params.set('genres', generos.join(','));
     }
   
-    return this.http.get<ApiResponse>(this.apiUrl, { params });
+    return this.http.get<ApiResponse>(this.gamesUrl, { params });
   }
-  buscarCategorias(): Observable<GenreCategory[]> {
-    return this.http.get<GenreCategory[]>(`${this.apiUrl}/genres`);
-  }
+
   buscarPlataformas(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/platforms`);
+    return this.http.get<any[]>(`${this.gamesUrl}/platforms`);
   }
-  buscarTemas(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/themes`);
+
+  getJogoDetalhes(id: number): Observable<any> {
+    return this.http.get(`${this.gamesUrl}/${id}`);
   }
-  buscarModosdeJogo(): Observable<any[]> {
-    return this.http.get<any[]>(`${this.apiUrl}/game-modes`);
-  }
-  getJogoDetalhes(id:number):Observable<any>{
-    return this.http.get(`${this.apiUrl}/${id}`)
-  }
+
   buscarJogoPorNome(nome: string, page: number = 1, pageSize: number = 500): Observable<any> {
-    return this.http.get(`${this.apiUrl}/search/${nome}`, {
+    return this.http.get(`${this.gamesUrl}/search/${nome}`, {
       params: {
         page: page.toString(),
         pageSize: pageSize.toString()
       }
     });
+  }
+
+  // Métodos de taxonomia usando baseUrl
+  buscarTaxonomiaGeneros(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/taxonomy/genres`);
+  }
+
+  buscarTaxonomiaTiposJogos(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/taxonomy/game-types`);
+  }
+  
+  buscarTaxonomiaTemas(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/taxonomy/themes`);
+  }
+
+  buscarTaxonomiaModosJogo(): Observable<any> {
+    return this.http.get(`${this.baseUrl}/taxonomy/game-modes`);
   }
 }

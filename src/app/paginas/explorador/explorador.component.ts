@@ -883,10 +883,11 @@ limparEstadoERecarregar() {
 
   private async loadGenres() {
     try {
-      const response = await lastValueFrom(this.apiService.buscarCategorias());
+      // Usar o novo endpoint de taxonomia
+      const response = await lastValueFrom(this.apiService.buscarTaxonomiaGeneros());
       
-      // Extrair os gêneros da resposta
-      this.genres = response.map(c => c.value.genre);
+      // Extrair os gêneros da resposta de taxonomia
+      this.genres = Object.values(response);
       
       // Criar uma cópia do estado atual
       const oldSelectedGenres = {...this.selectedGenres};
@@ -896,8 +897,6 @@ limparEstadoERecarregar() {
       
       // Para cada gênero disponível, manter seleção anterior ou definir como true (padrão)
       this.genres.forEach(genre => {
-        // Se não houver estado anterior ou não encontramos o gênero no estado antigo, 
-        // selecione-o por padrão (true)
         this.selectedGenres[genre] = oldSelectedGenres[genre] !== undefined ? 
           oldSelectedGenres[genre] : true;
       });
@@ -917,9 +916,10 @@ limparEstadoERecarregar() {
         this.applyFilters(false);
       }
     } catch (error) {
+      console.error('Erro ao carregar gêneros:', error);
       this.genresLoaded = true;
     }
-  }
+}
 
   private async carregarJogosComRetry(maxTentativas = 3, delayInicial = 1000) {
     let tentativa = 0;
@@ -2805,25 +2805,32 @@ updateAllSelected() {
     // Carregar temas de forma mais eficiente
     private async loadThemes() {
       try {
-        const response = await lastValueFrom(this.apiService.buscarTemas());
+        const response = await lastValueFrom(this.apiService.buscarTaxonomiaTemas());
         
-        // Verificar estrutura da resposta e ajustar o mapeamento
-        this.themes = response.map((t: any) => t.value?.theme || t.name).filter(Boolean);
+        this.themes = Object.values(response);
         
-        // Inicializar seleção com verificação de null/undefined
+        const oldSelectedThemes = {...this.selectedThemes};
+        this.selectedThemes = {};
+        
         this.themes.forEach(theme => {
-          if (this.selectedThemes[theme] === undefined) {
-            this.selectedThemes[theme] = true; // Valor padrão apenas se não existir
-          }
+          this.selectedThemes[theme] = oldSelectedThemes[theme] !== undefined ? 
+            oldSelectedThemes[theme] : true;
         });
-    
+        
+        const temAlgumSelecionado = Object.values(this.selectedThemes).some(value => value === true);
+        if (!temAlgumSelecionado) {
+          this.themes.forEach(theme => {
+            this.selectedThemes[theme] = true;
+          });
+        }
+        
         this.themesLoaded = true;
-        this.applyFilters(false); // Aplicar filtros após carregar
       } catch (error) {
         console.error('Erro ao carregar temas:', error);
         this.themesLoaded = true;
       }
-    }
+  }
+  
   
     includeNoTheme:boolean = true
     allThemesSelected: boolean = true;
@@ -2932,27 +2939,33 @@ updateAllSelected() {
   ============================================== */   
   
     // Carregar modos de jogo de forma mais eficiente
-    private async loadGameModes() {
+  private async loadGameModes() {
       try {
-        const response = await lastValueFrom(this.apiService.buscarModosdeJogo());
-        // Verificar estrutura da resposta e ajustar o mapeamento
-        this.gameModes = response.map((t: any) => t.value?.game_mode || t.name).filter(Boolean);
+        const response = await lastValueFrom(this.apiService.buscarTaxonomiaModosJogo());
         
-        // Inicializar seleção com verificação de null/undefined
+        this.gameModes = Object.values(response);
+        
+        const oldSelectedGameModes = {...this.selectedGameModes};
+        this.selectedGameModes = {};
+        
         this.gameModes.forEach(gameMode => {
-          if (this.selectedGameModes[gameMode] === undefined) {
-            this.selectedGameModes[gameMode] = true; // Valor padrão apenas se não existir
-          }
+          this.selectedGameModes[gameMode] = oldSelectedGameModes[gameMode] !== undefined ? 
+            oldSelectedGameModes[gameMode] : true;
         });
-    
+        
+        const temAlgumSelecionado = Object.values(this.selectedGameModes).some(value => value === true);
+        if (!temAlgumSelecionado) {
+          this.gameModes.forEach(gameMode => {
+            this.selectedGameModes[gameMode] = true;
+          });
+        }
+        
         this.gameModesLoaded = true;
-        this.applyFilters(false); // Aplicar filtros após carregar
       } catch (error) {
         console.error('Erro ao carregar modos de jogo:', error);
         this.gameModesLoaded = true;
       }
-      
-    }
+  }
   
     includeNoGameMode:boolean = true
     allGameModesSelected: boolean = true;

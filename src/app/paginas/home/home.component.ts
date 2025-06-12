@@ -82,43 +82,44 @@ export class HomeComponent implements OnInit, OnDestroy, AfterViewInit {
     });
   }
 
-  buscarCategorias(): void {
+  async buscarCategorias(){
     this.categoriasCarregando = true;
-    this.apiService.buscarCategorias().subscribe({
-      next: (data: GenreCategory[]) => {
-        this.categorias = data.map(category => ({
-          ...category,
-          startIndex: 0
-        }));
+    try {
+      // Buscar taxonomia de gêneros
+      const generosTaxonomia = await lastValueFrom(this.apiService.buscarTaxonomiaGeneros());
+      
+      // Transformar o objeto de taxonomia em array no formato esperado
+      this.categorias = Object.entries(generosTaxonomia).map(([id, name], index) => ({
+        id: parseInt(id),
+        value: {
+          genre: name as string,
+          games: []
+        },
+        startIndex: 0
+      }));
+      
+      // Inicializa os mapas para cada categoria
+      this.categorias.forEach(categoria => {
+        const genero = categoria.value.genre;
         
-        // Inicializa os mapas para cada categoria
-        this.categorias.forEach(categoria => {
-          const genero = categoria.value.genre;
-          const jogos = categoria.value.games || [];
-          
-          this.jogosPorCategoria.set(genero, jogos);
-          this.carregandoMaisPorCategoria.set(genero, false);
-          this.apiPagePorCategoria.set(genero, 1);
-          this.temMaisJogosPorCategoria.set(genero, true);
-          
-          // Verifica se a categoria já tem jogos suficientes
-          const temJogosSuficientes = jogos.length >= this.minJogosPorCategoria;
-          this.categoriasProntas.set(genero, temJogosSuficientes);
-          
-          // Inicia o carregamento de mais jogos se necessário
-          if (!temJogosSuficientes) {
-            this.buscarMaisJogosPorCategoria(genero);
-          }
-        });
-      },
-      error: (error: any) => {
-        console.log('Erro ao buscar categorias:', error);
-      },
-      complete: () => {
-        this.categoriasCarregando = false;
-        this.iniciarObservador();
-      }
-    });
+        this.jogosPorCategoria.set(genero, []);
+        this.carregandoMaisPorCategoria.set(genero, false);
+        this.apiPagePorCategoria.set(genero, 1);
+        this.temMaisJogosPorCategoria.set(genero, true);
+        
+        // Inicialmente nenhuma categoria tem jogos suficientes
+        this.categoriasProntas.set(genero, false);
+        
+        // Inicia o carregamento de jogos para cada categoria
+        this.buscarMaisJogosPorCategoria(genero);
+      });
+  
+    } catch (error) {
+      console.error('Erro ao carregar taxonomia de gêneros:', error);
+    } finally {
+      this.categoriasCarregando = false;
+      this.iniciarObservador();
+    }
   }
 
   /* ==============================================
